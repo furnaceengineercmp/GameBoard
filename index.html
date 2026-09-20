@@ -295,6 +295,15 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
 .sh-log{max-height:180px;overflow:auto;font-size:12px;color:var(--sh-dim);line-height:1.55}
 .sh-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#111c2e;
   border:1px solid var(--sh-acc);padding:10px 16px;border-radius:10px;z-index:99;max-width:90%}
+.sh-busy-badge{position:fixed;top:10px;right:10px;z-index:80;background:var(--sh-acc);
+  color:#06101f;padding:6px 14px;border-radius:20px;font-weight:800;font-size:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.4);animation:sh-pulse 1s ease-in-out infinite}
+@keyframes sh-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.sh-fc-card{display:inline-block;margin:0 6px 8px 0;min-width:150px}
+.sh-fc-val{margin-top:8px;padding:9px 10px;border-radius:8px;text-align:center;font-size:20px;font-weight:800}
+.sh-fc-up{background:var(--sh-ok);color:#04150b}
+.sh-fc-down{background:var(--sh-bad);color:#2b0808}
+.sh-fc-div{background:var(--sh-warn);color:#2b2100}
 @media(max-width:700px){ .sh-cname{width:112px;font-size:11px} .sh-mini{width:66px;height:84px} }
 
 </style>
@@ -325,7 +334,6 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
       <button class="btn" onclick="showScreen('guest-join')">Guest / Pemain</button>
       <button class="btn secondary" onclick="showScreen('admin-login')">Game Master</button>
     </div>
-    <button class="btn secondary" style="margin-top:8px" onclick="showScreen('saham')">📈 Main SAHAM</button>
   </div>
 
   <!-- SAHAM: aplikasi mandiri, dirender sendiri oleh script Saham ke dalam #shApp -->
@@ -355,6 +363,7 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
       <option value="investigasi">Investigasi Kejahatan</option>
       <option value="serigala">Serigala (Werewolf)</option>
       <option value="splendor">Splendor</option>
+      <option value="saham">Saham</option>
       <option value="mrwhite" disabled>Mr. White (segera)</option>
     </select>
 
@@ -428,6 +437,40 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
       <p class="small-note">Splendor dirancang untuk 2–4 pemain. Token, kartu, dan noble diatur otomatis sesuai jumlah pemain.</p>
       <div id="spErr" class="muted" style="color:var(--red)"></div>
       <button class="btn" style="margin-top:10px" onclick="doCreateRoomSplendor()">Buat / Update Room</button>
+    </div>
+
+    <div id="admSahamFields" class="hidden">
+      <label>No Room</label>
+      <input type="text" id="shRoomIdAdm" placeholder="mis. 1234">
+      <label>Versi Device</label>
+      <select id="shDeviceModeAdm">
+        <option value="multi">Multi device — tiap pemain 1 HP</option>
+        <option value="single">1 tablet untuk semua (hotseat)</option>
+        <option value="board">1 tablet sebagai papan + HP pemain</option>
+      </select>
+      <label>Versi Permainan</label>
+      <select id="shVariantAdm">
+        <option value="basic">Basic — papan sama semua perusahaan</option>
+        <option value="advance">Advance — papan beda + kartu karakter</option>
+      </select>
+      <div class="row">
+        <div>
+          <label>Jumlah Pemain</label>
+          <select id="shTotalPlayersAdm" onchange="shSyncRoundsAdm()">
+            <option value="2">2 pemain (2 meeple/orang)</option>
+            <option value="3">3 pemain</option>
+            <option value="4" selected>4 pemain</option>
+            <option value="5">5 pemain</option>
+          </select>
+        </div>
+        <div>
+          <label>Jumlah Ronde</label>
+          <input type="number" id="shRoundsAdm" min="1" max="10" value="5">
+        </div>
+      </div>
+      <p class="small-note">Setelah room dibuat, Anda langsung masuk ke aplikasi SAHAM sebagai Game Master.</p>
+      <div id="shErrAdm" class="muted" style="color:var(--red)"></div>
+      <button class="btn" style="margin-top:10px" onclick="doCreateRoomSaham()">Buat / Update Room</button>
     </div>
 
     <div id="admRoomCreated" class="hidden" style="margin-top:16px">
@@ -1066,6 +1109,7 @@ function onAdmGameTypeChange(){
   document.getElementById('admInvestigasiFields').classList.toggle('hidden', v!=='investigasi');
   document.getElementById('admSerigalaFields').classList.toggle('hidden', v!=='serigala');
   document.getElementById('admSplendorFields').classList.toggle('hidden', v!=='splendor');
+  document.getElementById('admSahamFields').classList.toggle('hidden', v!=='saham');
   document.getElementById('admRoomCreated').classList.add('hidden');
   if(v==='serigala' && !document.getElementById('sgRoles').childElementCount) populateSgRoles();
 }
@@ -1148,6 +1192,34 @@ function doCreateRoomSplendor(){
   });
 }
 
+function doCreateRoomSaham(){
+  var roomId = document.getElementById('shRoomIdAdm').value.trim();
+  var err = document.getElementById('shErrAdm');
+  if(!roomId){ err.textContent='Isi No Room'; return; }
+  err.textContent='';
+  var body = {
+    roomId: roomId,
+    deviceMode: document.getElementById('shDeviceModeAdm').value,
+    variant: document.getElementById('shVariantAdm').value,
+    totalPlayers: Number(document.getElementById('shTotalPlayersAdm').value)||4,
+    rounds: Number(document.getElementById('shRoundsAdm').value)||5
+  };
+  api('create_room_saham', body).then(function(res){
+    if(!res.ok){ err.textContent = res.error || 'Gagal membuat room'; return; }
+    // Langsung masuk ke aplikasi SAHAM sebagai Game Master dengan room yang baru dibuat
+    SH.roomId = roomId;
+    SH.role = (res.room.settings.deviceMode==='single') ? 'ALL' : 'GM';
+    SH.room = res.room;
+    SH.screen = 'gmcreate';
+    showScreen('saham');
+    shRender();
+  });
+}
+function shSyncRoundsAdm(){
+  var t = Number(document.getElementById('shTotalPlayersAdm').value);
+  document.getElementById('shRoundsAdm').value = ({2:6,3:6,4:5,5:5})[t]||5;
+}
+
 function doCreateRoom(){
   var roomId = document.getElementById('admRoomId').value.trim();
   var total = Number(document.getElementById('admTotalPlayers').value)||0;
@@ -1189,6 +1261,14 @@ function doCheckRoom(){
   if(!roomId || !name){ err.textContent='Isi No Room dan Nama'; return; }
   api('get_room',{roomId:roomId}).then(function(res){
     if(!res.room){ err.textContent='Room tidak ditemukan'; return; }
+    if(res.room.game === 'saham'){
+      // Room SAHAM punya menunya sendiri (Pemain / Papan / Satu Device) — arahkan ke sana,
+      // No Room yang sudah diketik otomatis terbawa.
+      err.textContent='';
+      SH.roomId = roomId; SH.screen = 'home';
+      showScreen('saham'); shRender();
+      return;
+    }
     if(res.room.phase !== 'lobby'){ err.textContent='Game sudah dimulai'; return; }
     err.textContent='';
     pendingRoomId = roomId;
@@ -2541,6 +2621,7 @@ function shToast(msg){
 function shDo(action, payload){
   if (SH.busy) return;
   SH.busy = true;
+  shRender(); // tampilkan tanda "memproses" SEKARANG JUGA, jangan tunggu server
   shApi(action, payload).then(function(res){
     SH.busy = false;
     if (!res.ok) shToast(res.error || "Aksi ditolak");
@@ -2549,7 +2630,9 @@ function shDo(action, payload){
   });
 }
 function shPoll(){
-  if (SH.screen!=="game" || !SH.roomId) return;
+  // Lewati polling saat sedang ada aksi diproses, supaya tidak berebut jalur
+  // dengan request aksi itu sendiri (aksi lebih penting, biar cepat selesai).
+  if (SH.screen!=="game" || !SH.roomId || SH.busy) return;
   shApi("sh_get_room",{}).then(function(res){
     if (res.ok && res.room){ SH.room = res.room; shRender(); }
   });
@@ -2577,6 +2660,8 @@ function shRender(){
   else if (SH.screen==="gmcreate") el.innerHTML = shGmCreate();
   else if (SH.screen==="join") el.innerHTML = shJoin();
   else el.innerHTML = shGame();
+
+  if (SH.busy) el.innerHTML = '<div class="sh-busy-badge">⏳ Memproses…</div>' + el.innerHTML;
 
   if (prevScroll!==null){
     var newLog = document.getElementById("shLogBox");
@@ -2829,6 +2914,18 @@ function shTrackHtml(c){
    + '<div class="sh-track">'+cells+'</div>'
    + '<div class="sh-badge" style="margin-left:6px">'+c.track[c.pos]+'k</div></div>';
 }
+// Kartu Kartu Informasi (rahasia maupun publik): label perusahaan pakai warna ciri
+// perusahaan itu sendiri; nilai forecast diberi latar hijau (naik) / merah (turun) / kuning (dividen).
+function shForecastCardHtml(p){
+  var c = shComp(p.companyId);
+  var isDiv = (p.forecast === "DIV");
+  var valCls = isDiv ? "sh-fc-div" : (p.forecast > 0 ? "sh-fc-up" : "sh-fc-down");
+  var valText = isDiv ? "$$ Dividen" : ((p.forecast > 0 ? "+" : "") + p.forecast);
+  return '<div class="sh-fc-card">'
+   + '<span class="sh-badge" style="background:'+(c?c.color:"#888")+';color:#111">'+shEsc(c?c.name:"?")+'</span>'
+   + '<div class="'+valCls+' sh-fc-val">'+valText+'</div>'
+   + '</div>';
+}
 function shBoardPanel(){
   var r=SH.room;
   return '<div class="sh-card"><div class="sh-h2">Papan Harga Saham</div>'
@@ -2841,9 +2938,7 @@ function shBoardArea(){
   if (r.phase==="lobby" || r.phase==="character") return board;
   var pub = (r.forecastPairs||[]).filter(function(p){ return p.publicCard; });
   var pubHtml = '<div class="sh-card"><div class="sh-h2">Informasi Publik</div>'
-   + (pub.length ? pub.map(function(p){ var c=shComp(p.companyId);
-        return '<div class="sh-lane" style="margin-bottom:8px"><b>'+shEsc(c?c.name:"?")+'</b><br>'
-        + '<span style="font-size:20px;font-weight:800">'+(p.forecast==="DIV"?"$$ Dividen":(p.forecast>0?"+":"")+p.forecast)+'</span></div>'; }).join('')
+   + (pub.length ? pub.map(function(p){ return shForecastCardHtml(p); }).join('')
        : '<div class="sh-dim">Tidak ada kartu terbuka ronde ini (2 pemain memang tidak punya kartu publik).</div>')
    + '</div>';
   return '<div class="sh-boardrow">'+board+pubHtml+'</div>';
@@ -3150,9 +3245,7 @@ function shMyPanel(){
     var mine = (r.forecastPairs||[]).filter(function(p){ return p.owner===me.id; });
     if (mine.length){
       infoHtml = '<div class="sh-dim" style="margin:4px 0 6px">Kartu Informasi rahasia:</div>'
-       + mine.map(function(p){ var c=shComp(p.companyId);
-           return '<div class="sh-lane" style="display:inline-block;margin:0 6px 8px 0;min-width:140px"><b>'+shEsc(c?c.name:"?")+'</b><br>'
-            + '<span style="font-size:20px;font-weight:800">'+(p.forecast==="DIV"?"$$":(p.forecast>0?"+":"")+p.forecast)+'</span></div>'; }).join('');
+       + mine.map(function(p){ return shForecastCardHtml(p); }).join('');
     }
   }
   var rows=(r.companies||[]).map(function(c){
