@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kartu Racun</title>
+<style>
+body{font-family:system-ui,sans-serif;background:radial-gradient(circle at 50% 0,#2b2160,#0d1020 65%) fixed;color:#eee;padding:12px;max-width:720px;margin:auto}
+h2{text-align:center;letter-spacing:3px;background:linear-gradient(90deg,#f59e0b,#ef4444);-webkit-background-clip:text;background-clip:text;color:transparent}
+button,input{font:inherit;padding:9px 14px;border-radius:10px;border:0;margin:3px}input{background:#fff;color:#111}
+button{background:linear-gradient(#4f8cff,#2563eb);color:#fff;cursor:pointer;transition:.15s}button:hover{transform:translateY(-2px)}button:disabled{opacity:.4;transform:none}
+.box{background:#1b1f33cc;padding:12px;border-radius:14px;margin:10px 0;border:1px solid #ffffff14}
+.sw{display:inline-block;width:30px;height:30px;border-radius:50%;margin:4px;cursor:pointer;border:3px solid transparent;transition:.15s}.sw.on{border-color:#fff;transform:scale(1.25)}
+.pl{display:inline-block;padding:7px 12px;border-radius:12px;margin:4px;background:#262b45;border-left:7px solid var(--c)}
+.pl.turn{animation:pulse 1s infinite;box-shadow:0 0 14px var(--c)}.pl.dead{opacity:.35;filter:grayscale(1)}
+@keyframes pulse{50%{transform:scale(1.07)}}
+.table{text-align:center}.tn{font-size:68px;font-weight:900;line-height:1.1;animation:pop .45s}
+@keyframes pop{0%{transform:scale(2.2);opacity:0}100%{transform:scale(1);opacity:1}}
+.mine{color:#fde047;font-weight:700;animation:pulse 1s infinite}
+.hand{display:flex;flex-wrap:wrap;justify-content:center;padding:18px 0 6px}
+.card{width:80px;height:114px;margin:0 -5px;border-radius:12px;position:relative;color:#fff;font-weight:900;text-align:center;box-shadow:0 5px 12px #000a;cursor:pointer;transition:.2s;animation:deal .45s backwards;border:3px solid #fff;user-select:none;overflow:hidden}
+.card:hover{transform:translateY(-18px) scale(1.08)!important;z-index:5}.noanim{animation:none}
+.card .bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px;font-style:normal}
+.card .big{position:relative;font-size:46px;line-height:84px;text-shadow:0 2px 6px #000a}.card .sm{position:absolute;left:6px;top:2px;font-size:13px;z-index:1;text-shadow:0 1px 3px #000}
+.card .nm{position:absolute;bottom:0;left:0;width:100%;font-size:10px;background:#000a;padding:3px 0}
+.card.off{filter:grayscale(.85) brightness(.55)}.mini{width:60px;height:86px;margin:6px auto;display:inline-block;animation:none;cursor:default}.mini:hover{transform:none!important}
+.mini .big{font-size:32px;line-height:62px}.mini .bg{font-size:40px}.mini .nm{font-size:8px}
+@keyframes deal{from{transform:translateY(-140px) scale(.3);opacity:0}}
+body.shake{animation:sh .5s}@keyframes sh{20%,60%{transform:translateX(-12px)}40%,80%{transform:translateX(12px)}}
+#log{font-size:13px;color:#aab}.kb{background:#dc2626;padding:2px 8px;margin:0 0 0 6px;font-size:12px}#chm{max-height:150px;overflow:auto;font-size:13px;margin:6px 0}#ask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0009;z-index:9}#ask:empty{display:none}
+</style></head><body>
+<h2>🃏 KARTU RACUN ☠️</h2><div id="app"></div><div id="ask"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const CFG={apiKey:"AIzaSyAyWuM8FrRc-MiliB8chJNlufmZ91KQLTM",authDomain:"game-board-b7ff8.firebaseapp.com",databaseURL:"https://game-board-b7ff8-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"game-board-b7ff8",appId:"1:162301062884:web:042b1b625d747e0b6386f1"};
+firebase.initializeApp(CFG);const db=firebase.database(),$=s=>document.querySelector(s);
+const JK={reset:'Reset 0',pick:'Pilih Angka',skip:'Skip',bomb:'Bom',lose:'Curi Kartu',swap:'Tukar Tangan',shuf:'Kocok Semua',life:'+Nyawa',rev:'Balik Arah'};
+const JI={reset:'🔄',pick:'🎯',skip:'⏭️',bomb:'💣',lose:'✂️',swap:'🤝',shuf:'🌪️',life:'💖',rev:'↩️'},JH={reset:190,pick:270,skip:45,bomb:0,lose:320,swap:160,shuf:290,life:340,rev:30};
+const JD={reset:'Angka meja jadi 0. Pemain berikutnya bebas main 0-10.',pick:'Pilih angka meja baru (1-10) sebagai batas minimum berikutnya.',skip:'Pemain aktif berikutnya dilewati (tidak kehilangan nyawa).',bomb:'SEMUA pemain (termasuk kamu) -1 nyawa, lalu semua kartu diacak ulang.',lose:'Pilih 1 lawan: 1 kartunya (acak) dibuang. Lawan harus punya minimal 2 kartu.',swap:'Tukar seluruh kartu tanganmu dengan 1 lawan.',shuf:'Kartu semua pemain diacak ulang (jumlah kartu tiap pemain tetap).',life:'Kamu mendapat +1 nyawa (tanpa batas maksimum).',rev:'Arah giliran dibalik, berlaku sampai dibalik lagi.'};
+const CI=['🥚','🐣','🐍','🕷️','🦂','🐊','🦈','🐉','👹','💀','☠️'],COL=['#ef4444','#f59e0b','#22c55e','#06b6d4','#3b82f6','#a855f7','#ec4899','#f8fafc'];
+let me,code,R,meta,players={},game={},hand=[],G=null,cfgBuilt=0,bye=0,joined=0,col=localStorage.col||COL[4],lk='',lh='',lt=null,pl_={};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';'),nm=u=>esc(players[u]?.name||'?'),norm=s=>s.trim().toUpperCase().replace(/[.#$\[\]\/\s]+/g,'-');
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+firebase.auth().signInAnonymously().then(c=>{me=c.user.uid;home()});
+
+function home(){$('#app').innerHTML=`<div class=box><b>👤 Profil kamu</b><br><input id=n placeholder="Nama kamu" maxlength=14 value="${esc(localStorage.nm||'')}"><br>Warna: <span id=sws></span></div>
+<div class=box><b>🚪 Gabung room</b><br><input id=c placeholder="Kode / nama room"><button onclick=jn()>Gabung</button></div>
+<div class=box><b>👑 Game Master</b><br><input id=rc placeholder="Nama / kode room baru"><input id=pw type=password placeholder="Password GM"><button onclick=mk()>Buat Room</button><button onclick=rooms()>📋 Kelola room</button><div id=rl></div></div>`;sw()}
+function sw(){$('#sws').innerHTML=COL.map(c=>`<span class="sw ${c==col?'on':''}" style="background:${c}" onclick="col='${c}';sw()"></span>`).join('')}
+function prof(){const n=$('#n').value.trim();if(!n){alert('Isi nama dulu');return 0}localStorage.nm=n;localStorage.col=col;return n}
+async function mk(){if(!prof())return;code=norm($('#rc').value);if(!code)return alert('Isi nama/kode room');
+ try{await db.ref('gmAuth/'+me).set($('#pw').value)}catch(e){return alert('Password GM salah')}
+ const s=await db.ref('rooms/'+code+'/meta').once('value');if(s.exists())return alert('Nama room sudah ada. Pakai nama lain, atau masuk/hapus lewat "Kelola room".');
+ try{await db.ref('rooms/'+code+'/meta').set({gm:me,state:'lobby'});await db.ref('roomIndex/'+code).set({gm:me,t:Date.now()})}catch(e){return alert('Gagal membuat room')}join()}
+async function rooms(){try{await db.ref('gmAuth/'+me).set($('#pw').value)}catch(e){return alert('Isi password GM dulu (salah)')}
+ const v=(await db.ref('roomIndex').once('value')).val()||{},ks=Object.keys(v).sort((a,b)=>v[b].t-v[a].t);
+ $('#rl').innerHTML=ks.length?ks.map(c=>`<div class=pl style="--c:#888" data-c="${esc(c)}"><b>${esc(c)}</b> <small>${new Date(v[c].t).toLocaleString('id-ID')}</small> <button onclick="enter(this.parentNode.dataset.c)">Masuk</button><button style="background:#dc2626" onclick="del(this.parentNode.dataset.c)">Hapus</button></div>`).join(''):'Belum ada room.'}
+function enter(c){if(!prof())return;code=c;join()}
+async function del(c){if(!confirm('Hapus room '+c+' beserta isinya?'))return;await db.ref('roomIndex/'+c).remove();await db.ref('rooms/'+c).remove();rooms()}
+async function delMine(){if(!confirm('Hapus room '+code+'? Semua pemain akan keluar.'))return;bye=1;await db.ref('roomIndex/'+code).remove();await db.ref('rooms/'+code).remove();location.reload()}
+function jn(){if(!prof())return;code=norm($('#c').value);db.ref('rooms/'+code+'/meta').once('value',s=>s.exists()?join():alert('Room tidak ditemukan'))}
+async function join(){R=db.ref('rooms/'+code);if((await R.child('kicked/'+me).once('value')).val()){alert('Kamu dikeluarkan dari room ini oleh Game Master');return home()}
+ R.child('players/'+me).update({name:localStorage.nm,color:col,ready:false,kicked:null});
+ $('#app').innerHTML='<div id=top></div><details class=box><summary>📖 Aturan &amp; efek joker</summary><div>Kartu angka harus ≥ angka meja.</div>'+Object.keys(JK).map(k=>`<div>${JI[k]} <b>${JK[k]}</b>: ${JD[k]}</div>`).join('')+'</details><div id=pl class=box></div><div id=cfg></div><div id=hd></div><div id=lg class=box></div><div id=cht class=box><b>💬 Chat room</b><div id=chm></div><input id=chi placeholder="Ketik pesan…" maxlength=120 style="width:65%" onkeydown="if(event.keyCode==13)chat()"><button onclick=chat()>Kirim</button></div>';
+ R.child('meta').on('value',s=>{meta=s.val();if(!meta){if(!bye)alert('Room ini sudah dihapus');location.reload();return}if(meta.gm===me&&!cfgBuilt){cfgBuilt=1;buildCfg();host()}render()});
+ R.child('players').on('value',s=>{players=s.val()||{};if(players[me])joined=1;if(joined&&meta&&(!players[me]||players[me].kicked)){alert('Kamu dikeluarkan oleh Game Master');location.reload();return}render()});
+ R.child('chat').limitToLast(30).on('value',s=>{const a=[];s.forEach(x=>{a.push(x.val())});const m=$('#chm');if(m){m.innerHTML=a.map(x=>`<div><b style="color:${esc(x.c)}">${esc(x.n)}</b>: ${esc(x.t)}</div>`).join('');m.scrollTop=m.scrollHeight}});
+ R.child('game').on('value',s=>{game=s.val()||{};render()});
+ R.child('hands/'+me).on('value',s=>{hand=s.val()||[];render()})}
+function chat(){const i=$('#chi'),t=i.value.trim();if(!t)return;i.value='';R.child('chat').push({n:localStorage.nm,c:col,t:t.slice(0,120),ts:firebase.database.ServerValue.TIMESTAMP})}
+function kick(u){if(!confirm('Keluarkan '+(players[u]?.name||'pemain')+' dari room?'))return;
+ R.child('kicked/'+u).set(true);
+ if(meta.state==='lobby'){R.child('players/'+u).remove();return}
+ if(!G||G.over||G.lives[u]<=0){R.child('players/'+u+'/kicked').set(true);return}
+ G.discard.push(...H(u));G.hands[u]=[];G.lives[u]=0;log('🚪 '+nm(u)+' dikeluarkan GM');
+ const a=alive();if(a.length<2)G.over=a[0]||'draw';else if(G.turn===u)G.turn=nxt(u);
+ publish();R.child('players/'+u+'/kicked').set(true)}
+const rdy=()=>R.child('players/'+me+'/ready').set(!players[me].ready);
+function buildCfg(){$('#cfg').innerHTML=`<div class=box><b>⚙️ Pengaturan GM</b><br>Nyawa <input id=c_l type=number value=2 style=width:55px> Multiplier <input id=c_m type=number value=2 style=width:55px> Joker % <input id=c_j type=number value=20 style=width:55px><br><small>Bobot joker (0 = nonaktif):</small><br>`+Object.keys(JK).map(k=>`${JI[k]} ${JK[k]} <input id=w_${k} type=number value=1 style=width:50px>`).join(' ')+`</div>`}
+
+const cardHtml=(c,cls='',i=0,n=1,off=0)=>{const j=typeof c=='string',h=j?JH[c]:210-c*21;return `<div title="${j?JD[c]:''}" class="card ${cls} ${off?'off':''}" style="background:linear-gradient(145deg,hsl(${h} 75% 52%),hsl(${h} 75% 24%));transform:rotate(${(i-(n-1)/2)*4}deg);animation-delay:${i*60}ms" ${cls=='mini'?'':`onclick=play(${i})`}><i class=bg style="opacity:${j?1:.3}">${j?JI[c]:CI[c]}</i>${j?`<span class=sm>JOKER</span><span class=nm>${JK[c]}</span>`:`<span class=sm>${c}</span><span class=big>${c}</span>`}</div>`};
+function render(){if(!meta)return;const gmv=meta.gm===me,st=meta.state,cl=u=>players[u]?.color||'#94a3b8';
+ $('#top').innerHTML=`Room <b>${code}</b> ${gmv?'👑 kamu Game Master <button style="background:#dc2626" onclick=delMine()>🗑 Hapus room</button>':''} · bagikan nama room ke teman`;$('#cfg').style.display=gmv&&st==='lobby'?'block':'none';
+ if(st==='lobby'){lk='';$('#hd').innerHTML=$('#lg').innerHTML='';$('#lg').style.display='none';
+  $('#pl').innerHTML='<b>Pemain di room</b><br>'+Object.keys(players).map(u=>`<span class=pl style="--c:${cl(u)}">${players[u].ready?'✅':'⏳'} ${nm(u)}${u===meta.gm?' 👑':''}${gmv&&u!==me?`<button class=kb onclick="kick('${u}')">✖</button>`:''}</span>`).join('')+`<br><button onclick=rdy()>${players[me]?.ready?'Batal Ready':'✋ Ready'}</button>`+(gmv?`<button onclick=start() style="background:linear-gradient(#22c55e,#15803d)">▶ Mulai</button>`:'');return}
+ const g=game,o=g.order||[],mine=g.turn===me&&st==='playing';$('#lg').style.display='block';
+ o.forEach(u=>{const l=players[u]?.lives;if(pl_[u]>l){document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),600)}pl_[u]=l});
+ $('#pl').innerHTML=`<div class=table>Angka meja<div class=tn ${g.table!==lt?'':'style=animation:none'}>${g.table}</div>${g.last!=null?cardHtml(g.last,'mini'):''}${typeof g.last=='string'?`<div><small>${JD[g.last]}</small></div>`:''}<div>Giliran: <b>${nm(g.turn)}</b> ${g.dir>0?'➡️':'⬅️'} · Deck ${g.deck} · Buangan ${g.disc}</div>${mine?'<div class=mine>🔥 Giliran kamu!</div>':''}</div>`
+ +(g.over?`<div class=table><h2>${g.over==='draw'?'Seri!':'🏆 '+nm(g.over)+' menang!'}</h2>${gmv?'<button onclick=again()>Main lagi</button>':''}</div>`:'')
+ +o.map(u=>{const p=players[u]||{},l=Math.max(p.lives,0);return `<span class="pl ${u===g.turn&&!g.over?'turn':''} ${l<=0?'dead':''}" style="--c:${cl(u)}">${nm(u)}${u===me?' (kamu)':''} ${'❤️'.repeat(Math.min(l,6))}${l>6?'+'+(l-6):''}${l<=0?'💀':''} 🂠${p.cards||0}${gmv&&u!==me&&l>0&&!g.over?`<button class=kb onclick="kick('${u}')">✖</button>`:''}</span>`}).join('');lt=g.table;
+ const hk=JSON.stringify(hand),k=hk+g.table+g.turn+st;
+ if(k!==lk){$('#hd').innerHTML=`<div class=hand>`+hand.map((c,i)=>cardHtml(c,hk!==lh?'':'noanim',i,hand.length,typeof c=='number'&&c<g.table)).join('')+`</div><div style=text-align:center><button onclick=stuck() ${mine?'':'disabled'}>☠️ Tidak bisa main (-1 ❤️)</button></div>`;lk=k;lh=hk}
+ $('#lg').innerHTML=(g.log||[]).slice().reverse().slice(0,6).join('<br>')}
+const ask=(t,o)=>new Promise(r=>{const d=$('#ask');d.innerHTML=`<div class=box style="border:1px solid #888"><b>${t}</b><br>`+o.map((x,i)=>`<button data-i=${i}>${x[1]}</button>`).join('')+`<button data-i=-1 style="background:#555">Batal</button></div>`;d.onclick=e=>{const i=e.target.dataset?.i;if(i===undefined)return;d.innerHTML='';r(i<0?null:o[i][0])}});
+async function play(i){if(game.turn!==me||game.over)return;const c=hand[i],a={uid:me,t:'play',i};
+ if(typeof c=='string'&&!await ask(`${JI[c]} ${JK[c]}<br><small>${JD[c]}</small>`,[[1,'Pakai']]))return;
+ if(c=='pick'){a.n=await ask('Pilih angka',[...Array(10)].map((_,k)=>[k+1,k+1]));if(!a.n)return}
+ if(c=='lose'||c=='swap'){a.tg=await ask('Pilih target',(game.order||[]).filter(u=>u!==me&&players[u].lives>0).map(u=>[u,nm(u)]));if(!a.tg)return}
+ R.child('actions').push(a)}
+const stuck=()=>R.child('actions').push({uid:me,t:'stuck'});
+
+// ===== LOGIKA GAME (dijalankan di browser Game Master) =====
+function host(){R.child('secret').once('value',s=>{G=s.val();if(G){G.deck=G.deck||[];G.discard=G.discard||[];G.log=G.log||[];G.hands=G.hands||{}}
+ R.child('actions').on('child_added',s=>{const a=s.val();s.ref.remove();act(a)})})}
+const H=u=>G.hands[u]||(G.hands[u]=[]),alive=()=>G.order.filter(u=>G.lives[u]>0),log=m=>G.log.push(m);
+function nxt(u,k=1){let i=G.order.indexOf(u);while(k>0){i=(i+G.dir+G.order.length)%G.order.length;if(G.lives[G.order[i]]>0)k--}return G.order[i]}
+function okT(u,c,t){return t!==u&&G.lives[t]>0&&(c!=='lose'||H(t).length>1)}
+function legal(u,c){if(typeof c=='number')return c>=G.table;if(c==='lose'||c==='swap')return alive().some(t=>okT(u,c,t));return true}
+function draw(u){if(!G.deck.length)return false;H(u).push(G.deck.pop());return !G.deck.length} // true = deck habis
+function reset(tr){const a=alive();if(a.length<2){G.over=a[0]||'draw';return}
+ const pool=[...G.deck,...G.discard];G.order.forEach(u=>{pool.push(...H(u));G.hands[u]=[]});shuffle(pool);
+ a.forEach(u=>G.hands[u]=pool.splice(0,3));G.deck=pool;G.discard=[];G.table=0;G.last=null;G.turn=G.lives[tr]>0?tr:nxt(tr)}
+function poison(vs,tr,m){vs.forEach(u=>G.lives[u]--);log('☠️ '+m);reset(tr)}
+function act(a){if(!G||G.over||a.uid!==G.turn)return;const u=a.uid,h=H(u);
+ if(a.t==='stuck'){if(h.some(c=>legal(u,c)))return;poison([u],u,nm(u)+' tidak bisa main, -1 nyawa')}
+ else if(a.t==='play'){const c=h[a.i];if(c===undefined||!legal(u,c))return;const t=a.tg,n=+a.n;
+  if((c==='lose'||c==='swap')&&!okT(u,c,t))return;if(c==='pick'&&!(n>=1&&n<=10))return;
+  h.splice(a.i,1);G.discard.push(c);G.last=c;let sk=0;
+  if(typeof c=='number'){G.table=c;log(nm(u)+' main '+c)}else log(nm(u)+' pakai '+JK[c]);
+  if(c==='bomb'){poison(alive(),u,'BOM! semua -1 nyawa')}
+  else{
+   if(c==='reset')G.table=0;if(c==='pick')G.table=n;if(c==='skip')sk=1;if(c==='life')G.lives[u]++;if(c==='rev')G.dir*=-1;
+   if(c==='lose'){const th=H(t);G.discard.push(th.splice(Math.random()*th.length|0,1)[0]);log(nm(t)+' kehilangan 1 kartu')}
+   if(c==='swap'){[G.hands[u],G.hands[t]]=[H(t),H(u)]}
+   if(c==='shuf'){const A=alive(),cn=A.map(x=>H(x).length),pool=shuffle(A.flatMap(H));A.forEach((x,i)=>G.hands[x]=pool.splice(0,cn[i]))}
+   if(draw(u))poison(alive(),u,'Deck habis! semua -1 nyawa');else G.turn=nxt(u,sk?2:1)}}
+ publish()}
+function publish(){const up={secret:G,game:{table:G.table,turn:G.turn,dir:G.dir,deck:G.deck.length,disc:G.discard.length,log:G.log.slice(-8),over:G.over||null,order:G.order,last:G.last??null}};
+ G.order.forEach(u=>{up['hands/'+u]=G.hands[u]||null;up['players/'+u+'/lives']=G.lives[u];up['players/'+u+'/cards']=H(u).length});
+ if(G.over)up['meta/state']='ended';R.update(up)}
+function start(){const ids=Object.keys(players).filter(u=>players[u].ready);if(ids.length<2)return alert('Minimal 2 pemain Ready');
+ const v=id=>+$('#'+id).value,N=ids.length,cfg={lives:v('c_l'),mult:v('c_m'),jr:v('c_j')},w={},deck=[];Object.keys(JK).forEach(k=>w[k]=v('w_'+k));
+ for(let n=0;n<=10;n++)for(let i=0;i<N*cfg.mult;i++)deck.push(n);
+ const J=Math.round(deck.length*cfg.jr/(100-cfg.jr)),ks=Object.keys(w).filter(k=>w[k]>0),S=ks.reduce((a,k)=>a+w[k],0),cnt={};let rem=J;
+ if(S&&J){ks.forEach(k=>{cnt[k]=Math.floor(J*w[k]/S);rem-=cnt[k]});ks.sort((a,b)=>(J*w[b]/S%1)-(J*w[a]/S%1));for(let i=0;rem>0;i++,rem--)cnt[ks[i%ks.length]]++;ks.forEach(k=>{for(let i=0;i<cnt[k];i++)deck.push(k)})}
+ shuffle(deck);G={order:ids,lives:{},hands:{},deck,discard:[],table:0,dir:1,turn:ids[Math.random()*N|0],log:['Permainan dimulai'],over:null,last:null};
+ ids.forEach(u=>{G.lives[u]=cfg.lives;G.hands[u]=deck.splice(0,3)});publish();R.child('meta').update({state:'playing',cfg})}
+function again(){G=null;const up={secret:null,game:null,'meta/state':'lobby'};Object.keys(players).forEach(u=>{up['players/'+u+'/ready']=false;up['hands/'+u]=null});R.update(up)}
+</script></body></html>

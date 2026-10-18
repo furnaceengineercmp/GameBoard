@@ -333,10 +333,14 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
     <div class="row">
       <button class="btn" onclick="showScreen('guest-join')">Guest / Pemain</button>
       <button class="btn secondary" onclick="showScreen('admin-login')">Game Master</button>
+      <button class="btn" style="background:#b91c1c" onclick="openKR()">🃏 Kartu Racun</button>
     </div>
   </div>
 
   <!-- SAHAM: aplikasi mandiri, dirender sendiri oleh script Saham ke dalam #shApp -->
+  <div id="screen-kr" class="hidden" style="max-width:760px;margin:0 auto"><button class="btn secondary" onclick="closeKR()">⬅ Menu Utama</button>
+    <iframe id="krFrame" title="Kartu Racun" style="width:100%;height:calc(100vh - 90px);border:0;margin-top:8px;border-radius:12px"></iframe></div>
+
   <div id="screen-saham" class="hidden sh-body">
     <div style="max-width:1180px;margin:0 auto;padding:10px 14px 0">
       <button class="sh-btn ghost" onclick="shBackToMenu()">⬅ Menu Utama</button>
@@ -1222,6 +1226,9 @@ function joinRoom(p) {
   try {
     var room = getRoomState(p.roomId);
     if (!room) return { ok: false, error: 'Room tidak ditemukan. Cek nomor room ke Game Master.' };
+    var nmL = String(p.name || '').trim().toLowerCase();
+    var exP = nmL && room.players.find(function (x) { return String(x.name || '').trim().toLowerCase() === nmL; });
+    if (exP) return { ok: true, room: spAttachDefs(room), playerId: exP.id, rejoined: true };
     if (room.phase !== 'lobby') return { ok: false, error: 'Game sudah dimulai, tidak bisa join.' };
     if (room.players.length >= room.settings.totalPlayers) return { ok: false, error: 'Room sudah penuh.' };
     var colorTaken = room.players.some(function (pl) { return pl.color === p.color; });
@@ -3463,7 +3470,7 @@ window.addEventListener('load', function(){
         }
       }).catch(function(){ showScreen('login'); });
     } else {
-      showScreen('login');
+      showScreen('login'); shResume();
     }
   });
 });
@@ -3654,6 +3661,7 @@ function doCreateRoomSaham(){
     // Langsung masuk ke aplikasi SAHAM sebagai Game Master dengan room yang baru dibuat
     SH.roomId = roomId;
     SH.role = (res.room.settings.deviceMode==='single') ? 'ALL' : 'GM';
+    SH.gm = true; SH.playerId = null;
     SH.room = res.room;
     SH.screen = 'gmcreate';
     showScreen('saham');
@@ -3710,10 +3718,12 @@ function doCheckRoom(){
       // Room SAHAM punya menunya sendiri (Pemain / Papan / Satu Device) — arahkan ke sana,
       // No Room yang sudah diketik otomatis terbawa.
       err.textContent='';
-      SH.roomId = roomId; SH.screen = 'home';
+      SH.roomId = roomId; SH.role = 'PLAYER'; SH.gm = false; SH.playerId = null; SH.prefName = name; SH.screen = 'join';
       showScreen('saham'); shRender();
       return;
     }
+    var exP=(res.room.players||[]).find(function(p){return String(p.name).trim().toLowerCase()===name.toLowerCase();});
+    if(exP){ err.textContent=''; state.roomId=roomId; state.playerId=exP.id; localStorage.setItem('igk_room',roomId); localStorage.setItem('igk_player',exP.id); setRoomBadge(); startPolling(); return; }
     if(res.room.phase !== 'lobby'){ err.textContent='Game sudah dimulai'; return; }
     err.textContent='';
     pendingRoomId = roomId;
@@ -5045,7 +5055,8 @@ function shApi(action, payload){
 // Kembali ke menu utama aplikasi (keluar dari mode SAHAM, hentikan polling).
 function shBackToMenu(){
   SH.screen = "home"; SH.room = null; SH.roomId = ""; SH.playerId = null;
-  SH.role = null; SH.actingId = null; SH.reveal = null; SH.confirmEnd = false;
+  SH.role = null; SH.actingId = null; SH.reveal = null; SH.confirmEnd = false; SH.gm = false;
+  try{localStorage.removeItem("sh_sess");}catch(e){}
   showScreen("login");
 }
 function shViewerId(){
@@ -5095,7 +5106,9 @@ function shCanAct(id){ return (SH.role==="PLAYER") ? SH.playerId===id : (SH.role
 function shMe(){ return shPl(shActorId()); }
 
 /* ---------------- render ---------------- */
+function shSave(){ try{ if(SH.roomId&&SH.screen!=="home") localStorage.setItem("sh_sess",JSON.stringify({roomId:SH.roomId,role:SH.role,playerId:SH.playerId,gm:!!SH.gm,name:SH.prefName||""})); }catch(e){} }
 function shRender(){
+  shSave();
   var el = document.getElementById("shApp");
   var prevLog = document.getElementById("shLogBox");
   var prevScroll = prevLog ? prevLog.scrollTop : null;
@@ -5141,23 +5154,10 @@ function shGoRole(r){
 /* ---------------- Game Master ---------------- */
 function shGmCreate(){
   var r = SH.room;
+  var st = r && r.settings;
   var head = '<div class="sh-card"><div class="sh-h2">Game Master — Room '+shEsc(SH.roomId)+'</div>'
-  + '<div class="sh-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">'
-  + '<div><label class="sh-lb">Versi device</label><select class="sh-in" id="shDev" style="width:100%">'
-  +  '<option value="multi">Multi device — tiap pemain 1 HP</option>'
-  +  '<option value="single">1 tablet untuk semua (hotseat)</option>'
-  +  '<option value="board">1 tablet sebagai papan + HP pemain</option></select></div>'
-  + '<div><label class="sh-lb">Versi permainan</label><select class="sh-in" id="shVar" style="width:100%">'
-  +  '<option value="basic">Basic — papan sama semua perusahaan</option>'
-  +  '<option value="advance">Advance — papan beda + kartu karakter</option></select></div>'
-  + '<div><label class="sh-lb">Jumlah pemain</label><select class="sh-in" id="shTot" style="width:100%" onchange="shSyncRounds()">'
-  +  '<option value="2">2 pemain (2 meeple/orang)</option><option value="3">3 pemain</option>'
-  +  '<option value="4" selected>4 pemain</option><option value="5">5 pemain</option></select></div>'
-  + '<div><label class="sh-lb">Jumlah ronde</label><input class="sh-in" id="shRnd" type="number" min="1" max="10" value="5" style="width:100%"></div>'
-  + '</div><div class="sh-row" style="margin-top:12px">'
-  + '<button class="sh-btn" onclick="shCreateRoom()">Buat / Perbarui Room</button>'
-  + '<button class="sh-btn ghost" onclick="shPing()">Tes Koneksi</button>'
-  + '<button class="sh-btn ghost" onclick="shBackHome()">Kembali</button></div></div>';
+  + '<div class="sh-dim">'+(st?(({multi:'Multi device',single:'1 tablet',board:'Papan + HP'})[st.deviceMode]||'')+' · '+(st.variant==='advance'?'Advance':'Basic')+' · '+st.totalPlayers+' pemain · '+st.rounds+' ronde':'')+'</div>'
+  + '<div class="sh-row" style="margin-top:10px"><button class="sh-btn ghost" onclick="shBackToMenu()">⬅ Keluar</button></div></div>';
 
   var lobby = "";
   if (r && r.players){
@@ -5171,6 +5171,7 @@ function shGmCreate(){
     + '<input class="sh-in" id="shAddNm" placeholder="Nama pemain" style="width:160px">'
     + '<button class="sh-btn" onclick="shAddPlayer()">Tambah Pemain</button>'
     + '<button class="sh-btn ghost" onclick="shQuickFill()">Isi Cepat ('+r.settings.totalPlayers+')</button>'
+    + (SH.playerId||r.settings.deviceMode!=="multi"?'':'<button class="sh-btn" onclick="shGmJoin()">🎮 Ikut main sebagai pemain</button>')
     + '</div>'
     + '<div class="sh-dim" style="margin-top:6px">Mode 1 tablet / papan: tambahkan semua pemain dari sini. '
     + 'Mode multi device: pemain masuk sendiri dari HP masing-masing.</div>'
@@ -5193,6 +5194,25 @@ function shPing(){
     else shToast("Server menjawab tapi menolak: "+(res.error||"?")+" (kemungkinan Code.gs lama masih aktif)");
   });
 }
+function shGmJoin(){
+  var el=document.getElementById("shAddNm"); var nm=(el&&el.value.trim())||prompt("Nama kamu sebagai pemain:"); if(!nm) return; nm=nm.trim();
+  shApi("join_room",{name:nm,color:shFreeColor()}).then(function(res){
+    if(!res.ok) return shToast(res.error||"Gagal ikut main");
+    SH.playerId=res.playerId; SH.gm=true; SH.role="PLAYER"; SH.prefName=nm; SH.room=res.room;
+    shApi("update_player",{playerId:SH.playerId,ready:true}).then(function(r2){ if(r2.ok&&r2.room) SH.room=r2.room; SH.screen="game"; shRender(); });
+  });
+}
+function shResume(){
+  var x; try{ x=JSON.parse(localStorage.getItem("sh_sess")||"null"); }catch(e){}
+  if(!x||!x.roomId) return;
+  SH.roomId=x.roomId; SH.role=x.role; SH.playerId=x.playerId; SH.gm=!!x.gm; SH.prefName=x.name||"";
+  shApi("sh_get_room",{}).then(function(res){
+    if(!res.ok||!res.room||res.room.game!=="saham"||res.room.phase==="ended"){ try{localStorage.removeItem("sh_sess");}catch(e){} SH.roomId=""; return; }
+    SH.room=res.room; SH.screen=(res.room.phase==="lobby"&&x.role==="GM")?"gmcreate":"game"; showScreen("saham"); shRender();
+  });
+}
+function openKR(){ showScreen("kr"); try{firebase.database().goOffline();}catch(e){} document.getElementById("krFrame").src="kartu-racun.html"; }
+function closeKR(){ document.getElementById("krFrame").src="about:blank"; try{firebase.database().goOnline();}catch(e){} showScreen("login"); }
 function shRefreshGm(){ shApi("sh_get_room",{}).then(function(res){ if(res.ok&&res.room){SH.room=res.room; shRender();} }); }
 function shCreateRoom(){
   shApi("create_room_saham",{
@@ -5244,7 +5264,7 @@ function shStart(){
   shApi("sh_start_game",{}).then(function(res){
     if(!res.ok) return shToast(res.error||"Belum bisa mulai");
     SH.room=res.room; SH.screen="game";
-    SH.role = (res.room.settings.deviceMode==="single") ? "ALL" : "GM";
+    SH.role = (SH.gm&&SH.playerId) ? "PLAYER" : ((res.room.settings.deviceMode==="single") ? "ALL" : "GM");
     shRender();
   });
 }
@@ -5253,12 +5273,13 @@ function shStart(){
 var shChosenColor = null;
 function shJoin(){
   return '<div class="sh-card"><div class="sh-h2">Gabung Room '+shEsc(SH.roomId)+'</div>'
-  + '<label class="sh-lb">Nama</label><input class="sh-in" id="shNm" style="width:100%;margin-bottom:10px" placeholder="Nama Anda">'
+  + '<label class="sh-lb">Nama</label><input class="sh-in" id="shNm" style="width:100%;margin-bottom:10px" placeholder="Nama Anda" value="'+shEsc(SH.prefName||"")+'">'
   + '<label class="sh-lb">Warna</label><div class="sh-row">'
   + SH_COLORS.map(function(c,i){ return '<button class="sh-btn" style="background:'+c+';width:46px;height:38px" onclick="shPickColor('+i+')"></button>'; }).join('')
   + '</div><div class="sh-dim" id="shClrTxt" style="margin:8px 0">Belum memilih warna.</div>'
   + '<div class="sh-row"><button class="sh-btn" onclick="shJoinGo()">Gabung</button>'
-  + '<button class="sh-btn ghost" onclick="shBackHome()">Kembali</button></div></div>';
+  + '<button class="sh-btn ghost" onclick="shBackToMenu()">Kembali</button></div>'
+  + '<div class="sh-dim" style="margin-top:10px">Mode tablet: <a href="#" onclick="shGoRole(\'BOARD\');return false">Papan</a> · <a href="#" onclick="shGoRole(\'ALL\');return false">Satu device</a></div></div>';
 }
 function shPickColor(i){
   shChosenColor = SH_COLORS[i];
@@ -5302,8 +5323,8 @@ function shGame(){
     body += shBoardArea() + shPhasePanel() + shMyPanel();
   }
   body += shPlayersPanel() + shLogPanel();
-  if (SH.role==="GM") body += '<div class="sh-card"><button class="sh-btn bad" onclick="shDo(\'sh_force_next\',{})">Lompat Fase (darurat)</button></div>';
-  if ((SH.role==="GM"||SH.role==="ALL") && r.phase!=="ended") body += shEndGameControl();
+  if (SH.role==="GM"||SH.gm) body += '<div class="sh-card"><button class="sh-btn bad" onclick="shDo(\'sh_force_next\',{})">Lompat Fase (darurat)</button></div>';
+  if ((SH.role==="GM"||SH.role==="ALL"||SH.gm) && r.phase!=="ended") body += shEndGameControl();
   return body;
 }
 
@@ -5322,11 +5343,11 @@ function shConfirmEndGame(){
 
 function shLobbyView(){
   var r = SH.room;
-  return '<div class="sh-card"><div class="sh-h2">Menunggu Game Master memulai…</div>'
+  return '<div class="sh-card"><div class="sh-h2">'+(SH.gm?"Lobi — kamu Game Master & pemain":"Menunggu Game Master memulai…")+'</div>'
   + '<div class="sh-dim">Room '+shEsc(r.roomId)+' — '+r.players.length+'/'+r.settings.totalPlayers+' pemain</div>'
   + '<div class="sh-row" style="margin-top:10px">'
   + r.players.map(function(p){ return '<span class="sh-badge" style="background:'+p.color+';color:#111">'+shEsc(p.name)+'</span>'; }).join('')
-  + '</div></div>';
+  + '</div>' + (SH.gm?'<div class="sh-row" style="margin-top:12px"><button class="sh-btn ok" onclick="shStart()">Mulai Permainan</button><button class="sh-btn ghost" onclick="shRefreshGm()">Muat ulang</button></div>':'') + '</div>';
 }
 
 function shHeader(){
