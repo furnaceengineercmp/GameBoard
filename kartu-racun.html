@@ -22,7 +22,11 @@ button{background:linear-gradient(#4f8cff,#2563eb);color:#fff;cursor:pointer;tra
 .mini .big{font-size:32px;line-height:62px}.mini .bg{font-size:40px}.mini .nm{font-size:8px}
 @keyframes deal{from{transform:translateY(-140px) scale(.3);opacity:0}}
 body.shake{animation:sh .5s}@keyframes sh{20%,60%{transform:translateX(-12px)}40%,80%{transform:translateX(12px)}}
-#log{font-size:13px;color:#aab}.kb{background:#dc2626;padding:2px 8px;margin:0 0 0 6px;font-size:12px}#chm{max-height:150px;overflow:auto;font-size:13px;margin:6px 0}#ask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0009;z-index:9}#ask:empty{display:none}
+#log{font-size:13px;color:#aab}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.fld label{display:block;font-size:12px;color:#aab;margin-bottom:4px}.fld input{width:100%;box-sizing:border-box;text-align:center;font-size:18px;font-weight:700;margin:0}
+.jg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px}.jc{border-radius:12px;padding:10px;text-align:center;border:1px solid #ffffff22;transition:.2s}.jc:hover{transform:translateY(-3px)}.jc.off{opacity:.4;filter:grayscale(.8)}
+.jc .ic{font-size:28px}.jc .jn{font-size:12px;font-weight:700;margin:2px 0 8px}.st{display:flex;align-items:center;justify-content:center;gap:6px}.st button{width:32px;height:32px;padding:0;margin:0;border-radius:50%;font-size:18px}.st input{width:48px;text-align:center;margin:0;padding:6px 0;font-weight:700}
+.sum{margin-top:14px;padding:9px 12px;border-radius:10px;background:#0006;font-size:13px}summary{cursor:pointer}@media(max-width:480px){.g3{grid-template-columns:1fr}}
+.kb{background:#dc2626;padding:2px 8px;margin:0 0 0 6px;font-size:12px}#chm{max-height:150px;overflow:auto;font-size:13px;margin:6px 0}#ask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0009;z-index:9}#ask:empty{display:none}
 </style></head><body>
 <h2>🃏 KARTU RACUN ☠️</h2><div id="app"></div><div id="ask"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -73,12 +77,19 @@ function kick(u){if(!confirm('Keluarkan '+(players[u]?.name||'pemain')+' dari ro
  const a=alive();if(a.length<2)G.over=a[0]||'draw';else if(G.turn===u)G.turn=nxt(u);
  publish();R.child('players/'+u+'/kicked').set(true)}
 const rdy=()=>R.child('players/'+me+'/ready').set(!players[me].ready);
-function buildCfg(){$('#cfg').innerHTML=`<div class=box><b>⚙️ Pengaturan GM</b><br>Nyawa <input id=c_l type=number value=2 style=width:55px> Multiplier <input id=c_m type=number value=2 style=width:55px> Joker % <input id=c_j type=number value=20 style=width:55px><br><small>Bobot joker (0 = nonaktif):</small><br>`+Object.keys(JK).map(k=>`${JI[k]} ${JK[k]} <input id=w_${k} type=number value=1 style=width:50px>`).join(' ')+`</div>`}
+function buildCfg(){$('#cfg').innerHTML=`<details class=box open oninput=cfgSum()><summary><b>⚙️ Pengaturan Game Master</b></summary>
+<div class=g3 style="margin-top:12px"><div class=fld><label>❤️ Nyawa awal</label><input id=c_l type=number min=1 value=2></div><div class=fld><label>🃏 Multiplier deck</label><input id=c_m type=number min=1 value=2></div><div class=fld><label>🎭 Joker %</label><input id=c_j type=number min=0 max=60 value=20></div></div>
+<div style="margin:16px 0 4px"><b>Bobot joker</b> <small style="color:#aab">(0 = nonaktif, makin besar makin sering muncul)</small></div>
+<div class=jg>`+Object.keys(JK).map(k=>`<div class=jc id=jc_${k} style="background:linear-gradient(145deg,hsl(${JH[k]} 55% 30%),hsl(${JH[k]} 55% 16%))"><div class=ic>${JI[k]}</div><div class=jn>${JK[k]}</div><div class=st><button onclick="stp('w_${k}',-1)">−</button><input id=w_${k} type=number min=0 value=1><button onclick="stp('w_${k}',1)">+</button></div></div>`).join('')+`</div><div id=csum class=sum></div></details>`;cfgSum()}
+function stp(id,d){const e=$('#'+id);e.value=Math.max(0,(+e.value||0)+d);cfgSum()}
+function cfgSum(){const n=Object.values(players).filter(p=>p.ready).length||2,v=id=>+($('#'+id)||{}).value||0,jr=Math.min(v('c_j'),90),nor=11*n*v('c_m'),J=Math.round(nor*jr/(100-jr));
+ Object.keys(JK).forEach(k=>{const c=$('#jc_'+k);if(c)c.classList.toggle('off',!v('w_'+k))});
+ const s=$('#csum');if(s)s.innerHTML=`📊 Perkiraan untuk <b>${n}</b> pemain siap: <b>${nor}</b> kartu angka + <b>${J}</b> joker = <b>${nor+J}</b> kartu`}
 
 const cardHtml=(c,cls='',i=0,n=1,off=0)=>{const j=typeof c=='string',h=j?JH[c]:210-c*21;return `<div title="${j?JD[c]:''}" class="card ${cls} ${off?'off':''}" style="background:linear-gradient(145deg,hsl(${h} 75% 52%),hsl(${h} 75% 24%));transform:rotate(${(i-(n-1)/2)*4}deg);animation-delay:${i*60}ms" ${cls=='mini'?'':`onclick=play(${i})`}><i class=bg style="opacity:${j?1:.3}">${j?JI[c]:CI[c]}</i>${j?`<span class=sm>JOKER</span><span class=nm>${JK[c]}</span>`:`<span class=sm>${c}</span><span class=big>${c}</span>`}</div>`};
 function render(){if(!meta)return;const gmv=meta.gm===me,st=meta.state,cl=u=>players[u]?.color||'#94a3b8';
  $('#top').innerHTML=`Room <b>${code}</b> ${gmv?'👑 kamu Game Master <button style="background:#dc2626" onclick=delMine()>🗑 Hapus room</button>':''} · bagikan nama room ke teman`;$('#cfg').style.display=gmv&&st==='lobby'?'block':'none';
- if(st==='lobby'){lk='';$('#hd').innerHTML=$('#lg').innerHTML='';$('#lg').style.display='none';
+ if(st==='lobby'){lk='';if(gmv&&$('#csum'))cfgSum();$('#hd').innerHTML=$('#lg').innerHTML='';$('#lg').style.display='none';
   $('#pl').innerHTML='<b>Pemain di room</b><br>'+Object.keys(players).map(u=>`<span class=pl style="--c:${cl(u)}">${players[u].ready?'✅':'⏳'} ${nm(u)}${u===meta.gm?' 👑':''}${gmv&&u!==me?`<button class=kb onclick="kick('${u}')">✖</button>`:''}</span>`).join('')+`<br><button onclick=rdy()>${players[me]?.ready?'Batal Ready':'✋ Ready'}</button>`+(gmv?`<button onclick=start() style="background:linear-gradient(#22c55e,#15803d)">▶ Mulai</button>`:'');return}
  const g=game,o=g.order||[],mine=g.turn===me&&st==='playing';$('#lg').style.display='block';
  o.forEach(u=>{const l=players[u]?.lives;if(pl_[u]>l){document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),600)}pl_[u]=l});

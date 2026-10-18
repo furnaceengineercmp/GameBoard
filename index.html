@@ -306,6 +306,103 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
 .sh-fc-div{background:var(--sh-warn);color:#2b2100}
 @media(max-width:700px){ .sh-cname{width:112px;font-size:11px} .sh-mini{width:66px;height:84px} }
 
+/* ===== TEMA SERAGAM — ungu gelap + oranye (mode gelap & terang) ===== */
+:root{--ink:#0d1020;--panel:#1b1f33;--panel2:#262b45;--line:#ffffff22;--paper:#eceaf5;--paper-dim:#a9acc6;--paper-card:#f4ecda;
+ --gold:#f59e0b;--gold-dim:#f59e0b88;--red:#ef4444;--teal:#06b6d4;--shadow:0 8px 24px rgba(0,0,0,.45);--bg-blot-1:#2b2160;--bg-blot-2:#2b2160;--cg1:#2c3257;--cg2:#1f2340;
+ --sh-bg:transparent;--sh-panel:#1b1f33;--sh-panel2:#262b45;--sh-line:#ffffff22;--sh-txt:#eceaf5;--sh-dim:#a9acc6;--sh-acc:#4f8cff;--sh-ok:#22c55e;--sh-warn:#f59e0b;--sh-bad:#ef4444}
+[data-theme="light"]{--ink:#f1edfb;--panel:#ffffff;--panel2:#efe9fa;--line:#2a1f5a26;--paper:#241a45;--paper-dim:#665f8d;--paper-card:#fffaf0;
+ --gold:#d97706;--gold-dim:#d9770688;--red:#dc2626;--teal:#0e8fa3;--shadow:0 8px 22px rgba(60,40,120,.16);--bg-blot-1:#e0d4ff;--bg-blot-2:#ffe8c7;--cg1:#ffffff;--cg2:#efe9fa;
+ --sh-panel:#ffffff;--sh-panel2:#efe9fa;--sh-line:#2a1f5a26;--sh-txt:#241a45;--sh-dim:#665f8d;--sh-acc:#3b6fe0;--sh-ok:#16a34a;--sh-warn:#d97706;--sh-bad:#dc2626}
+html,body{background:var(--ink)}
+body{background:radial-gradient(circle at 50% 0,var(--bg-blot-1),var(--ink) 65%) fixed}
+.topbar{border-bottom:1px solid var(--line)}
+.topbar .title{font-size:1.4rem;letter-spacing:.18em;background:linear-gradient(90deg,#f59e0b,#ef4444);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{color:var(--gold)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.btn{background:linear-gradient(#4f8cff,#2563eb);color:#fff;border-radius:10px;transition:transform .15s,filter .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px #0004}
+.btn.secondary{background:transparent;border:1px solid var(--line);color:var(--paper)}
+.btn.danger{background:linear-gradient(#ef4444,#b91c1c);color:#fff}
+.btn:disabled{background:var(--panel2);color:var(--paper-dim)}
+input[type=text],input[type=password],input[type=number],select{border-radius:10px}
+input:focus,select:focus{outline:none;border-color:#4f8cff}
+.player-row,.sg-player-row{border-radius:10px}.player-row:hover,.sg-player-row:hover{filter:brightness(1.1)}
+.stamp{border-color:var(--gold);color:var(--gold)}
+@keyframes gbpulse{50%{box-shadow:0 0 22px #f59e0b99}}
+@keyframes gbfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes gbshine{0%,55%{left:-60%}100%{left:140%}}
+@keyframes gbtwinkle{50%{opacity:.2;transform:scale(.6)}}
+@keyframes gbflick{0%,100%{opacity:.5}45%{opacity:.12}60%{opacity:.6}}
+@keyframes gbbob{0%,100%{transform:translateY(-50%)}50%{transform:translateY(-64%)}}
+@keyframes gbsway{0%,100%{transform:translateY(-50%) rotate(-10deg)}50%{transform:translateY(-50%) rotate(10deg)}}
+@keyframes gbdrive{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-14px)}}
+@keyframes gbbeat{0%,100%{opacity:.35;transform:translateY(-50%) scale(1)}50%{opacity:.65;transform:translateY(-50%) scale(1.15)}}
+@keyframes gbswing{0%,100%{transform:translateY(-50%) rotate(-25deg)}50%{transform:translateY(-50%) rotate(25deg)}}
+@keyframes gbtick{to{background-position:-60px 0}}
+/* ---- Splendor ---- */
+.sp-card{background:linear-gradient(160deg,var(--cg1),var(--cg2));border-radius:12px;position:relative;overflow:hidden;isolation:isolate;transition:transform .2s,box-shadow .2s,border-color .2s}
+.sp-card:hover{transform:translateY(-6px) rotate(-1deg);box-shadow:0 10px 22px #0007;border-color:#f59e0b}
+.sp-card.tier1{border-top-color:#22c55e}.sp-card.tier2{border-top-color:#a855f7}.sp-card.tier3{border-top-color:#f59e0b}
+.sp-card[class*="gem-"]::before{content:"";position:absolute;inset:22% 4% 4% 4%;background-repeat:no-repeat;background-position:center;background-size:contain;opacity:.6;z-index:-1;animation:gbfloat 4s ease-in-out infinite}
+.sp-card[class*="gem-"]::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);animation:gbshine 5s ease-in-out infinite;pointer-events:none}
+.sp-card:nth-child(2n)::after{animation-delay:1s}.sp-card:nth-child(3n)::after{animation-delay:2s}
+.sp-card[class*="gem-"] .sp-cost-pip{background:rgba(0,0,0,.38);color:#fff}
+.sp-card.gem-diamond .sp-cost-pip{background:rgba(255,255,255,.75);color:#1a2238}
+.sp-card.gem-diamond .sp-points{color:#b45309}
+.sp-card[class*="gem-"] .btn.secondary{color:#fff;border-color:#ffffff77}
+.sp-card.gem-diamond .btn.secondary{color:#1a2238;border-color:#1a223877}
+.sp-card.gem-diamond{background:linear-gradient(160deg,#ffffff,#c4cfe8);color:#1a2238}.sp-card.gem-diamond::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%208%2C40%27%20fill%3D%27%235b6fa3%27%20fill-opacity%3D%27.28%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%235b6fa3%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%2050%2C92%208%2C40%27/%3E%3Cpolyline%20points%3D%278%2C40%2092%2C40%27/%3E%3Cpolyline%20points%3D%2730%2C14%2038%2C40%2050%2C92%2062%2C40%2070%2C14%27/%3E%3Cpolyline%20points%3D%2738%2C40%2050%2C14%2062%2C40%27/%3E%3C/g%3E%3C/svg%3E")}
+.sp-card.gem-sapphire{background:linear-gradient(160deg,#2a5be0,#0a1844);color:#fff}.sp-card.gem-sapphire::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%208%2C40%27%20fill%3D%27%23a9c8ff%27%20fill-opacity%3D%27.28%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23a9c8ff%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%2050%2C92%208%2C40%27/%3E%3Cpolyline%20points%3D%278%2C40%2092%2C40%27/%3E%3Cpolyline%20points%3D%2730%2C14%2038%2C40%2050%2C92%2062%2C40%2070%2C14%27/%3E%3Cpolyline%20points%3D%2738%2C40%2050%2C14%2062%2C40%27/%3E%3C/g%3E%3C/svg%3E")}
+.sp-card.gem-emerald{background:linear-gradient(160deg,#14a874,#033a2a);color:#fff}.sp-card.gem-emerald::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%208%2C40%27%20fill%3D%27%2397f3c9%27%20fill-opacity%3D%27.28%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%2397f3c9%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%2050%2C92%208%2C40%27/%3E%3Cpolyline%20points%3D%278%2C40%2092%2C40%27/%3E%3Cpolyline%20points%3D%2730%2C14%2038%2C40%2050%2C92%2062%2C40%2070%2C14%27/%3E%3Cpolyline%20points%3D%2738%2C40%2050%2C14%2062%2C40%27/%3E%3C/g%3E%3C/svg%3E")}
+.sp-card.gem-ruby{background:linear-gradient(160deg,#d81b4a,#470a1c);color:#fff}.sp-card.gem-ruby::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%208%2C40%27%20fill%3D%27%23ffb3c6%27%20fill-opacity%3D%27.28%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffb3c6%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%2050%2C92%208%2C40%27/%3E%3Cpolyline%20points%3D%278%2C40%2092%2C40%27/%3E%3Cpolyline%20points%3D%2730%2C14%2038%2C40%2050%2C92%2062%2C40%2070%2C14%27/%3E%3Cpolyline%20points%3D%2738%2C40%2050%2C14%2062%2C40%27/%3E%3C/g%3E%3C/svg%3E")}
+.sp-card.gem-onyx{background:linear-gradient(160deg,#52525e,#0a0a10);color:#fff}.sp-card.gem-onyx::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%208%2C40%27%20fill%3D%27%23cfcfe0%27%20fill-opacity%3D%27.28%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23cfcfe0%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27%3E%3Cpolygon%20points%3D%2730%2C14%2070%2C14%2092%2C40%2050%2C92%208%2C40%27/%3E%3Cpolyline%20points%3D%278%2C40%2092%2C40%27/%3E%3Cpolyline%20points%3D%2730%2C14%2038%2C40%2050%2C92%2062%2C40%2070%2C14%27/%3E%3Cpolyline%20points%3D%2738%2C40%2050%2C14%2062%2C40%27/%3E%3C/g%3E%3C/svg%3E")}
+.sp-token-pill,.sp-take-color{background:linear-gradient(135deg,var(--cg1),var(--cg2));transition:transform .15s}.sp-token-pill:hover{transform:scale(1.08)}
+.sp-player-panel{border-radius:12px;background:linear-gradient(135deg,var(--cg1),var(--cg2))}
+.sp-player-panel.turn{border-left-color:#f59e0b;animation:gbpulse 1.4s infinite}
+.sp-noble{width:98px;min-height:84px;border-radius:12px;position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(160deg,#6b3fa0,#2a1450);border:1px solid #fbbf24;color:#fff6d6;font-weight:700;text-shadow:0 1px 3px #000a;transition:transform .2s}
+.sp-noble:hover{transform:translateY(-4px)}
+.sp-noble::before{content:"🤴";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:58px;opacity:.3;z-index:-1;animation:gbfloat 3.5s ease-in-out infinite}
+.sp-noble.nb1::before{content:"👑"}.sp-noble.nb2::before{content:"👸"}
+.sp-noble::after{content:"✨";position:absolute;top:3px;right:6px;font-size:13px;animation:gbtwinkle 1.8s infinite}
+.sp-tier-label{color:var(--gold)}
+/* ---- Saham ---- */
+#screen-saham.sh-body{background:transparent;color:var(--sh-txt)}
+.sh-card{background:linear-gradient(160deg,var(--cg1),var(--cg2));border-radius:14px;transition:border-color .2s}.sh-card:hover{border-color:#f59e0b88}
+.sh-h1{background:linear-gradient(90deg,#f59e0b,#ef4444);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:4px}
+.sh-h2{color:var(--sh-warn)}
+button.sh-btn{background:linear-gradient(#4f8cff,#2563eb);color:#fff;transition:transform .15s,filter .15s}button.sh-btn:hover{transform:translateY(-2px);filter:brightness(1.12)}
+button.sh-btn.ghost{background:transparent;color:var(--sh-txt)}
+button.sh-btn.ok{background:linear-gradient(#22c55e,#15803d);color:#fff}button.sh-btn.bad{background:linear-gradient(#ef4444,#b91c1c);color:#fff}
+.sh-cell.here{background:linear-gradient(#f59e0b,#ef4444);color:#1a0f00;animation:gbpulse 1.4s infinite}
+.sh-step.avail:hover:not(:disabled){transform:scale(1.12);background:#4f8cff;color:#fff}
+.sh-mini{transition:transform .2s,box-shadow .2s;cursor:pointer}.sh-mini:hover{transform:translateY(-6px) rotate(-2deg);box-shadow:0 8px 18px #0008}
+.sh-lane{border-radius:12px;transition:border-color .2s}.sh-lane:hover{border-color:#f59e0b}
+.sh-toast{background:var(--sh-panel);border-color:#f59e0b;color:var(--sh-txt)}
+.sh-busy-badge{background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1a0f00}
+input.sh-in,select.sh-in{border-radius:10px}
+.sh-cname{position:relative;overflow:hidden;isolation:isolate;transition:transform .2s}.sh-cname:hover{transform:translateX(4px)}
+.sh-cname::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.14) 0 6px,transparent 6px 14px);z-index:-1}
+.sh-cname::after{position:absolute;right:6px;top:50%;font-size:30px;opacity:.45;z-index:-1;transform:translateY(-50%)}
+.co-pln::after{content:"⚡";animation:gbflick 1.6s infinite}
+.co-pertamini::after{content:"🛢️";animation:gbbob 2.4s ease-in-out infinite}
+.co-bi::after{content:"🏦";animation:gbbeat 2.2s ease-in-out infinite}
+.co-astro::after{content:"🚗";animation:gbdrive 2.6s ease-in-out infinite}
+.co-sawat::after{content:"🌴";animation:gbsway 3s ease-in-out infinite}
+.co-freepart::after{content:"⛏️";animation:gbswing 1.8s ease-in-out infinite}
+.sh-fc-val{position:relative;overflow:hidden;isolation:isolate;text-shadow:0 1px 3px #0006}
+.sh-fc-val::before{content:"";position:absolute;inset:0;z-index:-1;background-size:60px 30px;animation:gbtick 2.5s linear infinite}
+.sh-fc-val::after{position:absolute;right:6px;bottom:1px;font-size:22px;opacity:.6;z-index:-1}
+.sh-fc-up{background:linear-gradient(135deg,#16a34a,#065f2c);color:#fff}
+.sh-fc-up::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2760%27%20height%3D%2730%27%3E%3Cpolyline%20points%3D%270%2C28%2014%2C16%2024%2C21%2040%2C7%2060%2C1%27%20fill%3D%27none%27%20stroke%3D%27white%27%20stroke-opacity%3D%27.4%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27/%3E%3C/svg%3E")}
+.sh-fc-up::after{content:"📈"}
+.sh-fc-down{background:linear-gradient(135deg,#dc2626,#7a1010);color:#fff}
+.sh-fc-down::before{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2760%27%20height%3D%2730%27%3E%3Cpolyline%20points%3D%270%2C2%2014%2C14%2024%2C9%2040%2C23%2060%2C29%27%20fill%3D%27none%27%20stroke%3D%27white%27%20stroke-opacity%3D%27.4%27%20stroke-width%3D%273%27%20stroke-linejoin%3D%27round%27/%3E%3C/svg%3E")}
+.sh-fc-down::after{content:"📉"}
+.sh-fc-div{background:linear-gradient(135deg,#fbbf24,#b45309);color:#2b1700;text-shadow:none}
+.sh-fc-div::before{display:flex;align-items:center;justify-content:space-around;content:"💰 💵 💰 💵";font-size:24px;opacity:.38;background:none;animation:gbfloat 2s ease-in-out infinite}
+.sh-fc-div::after{content:""}
+@media(max-width:700px){.sh-cname::after{font-size:22px}}
+
 </style>
 </head>
 <body>
@@ -333,7 +430,7 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
     <div class="row">
       <button class="btn" onclick="showScreen('guest-join')">Guest / Pemain</button>
       <button class="btn secondary" onclick="showScreen('admin-login')">Game Master</button>
-      <button class="btn" style="background:#b91c1c" onclick="openKR()">🃏 Kartu Racun</button>
+      <button class="btn" style="background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1a0f00" onclick="openKR()">🃏 Kartu Racun</button>
     </div>
   </div>
 
@@ -816,7 +913,7 @@ table.sh-tb{width:100%;border-collapse:collapse;font-size:13px}
     <button class="btn" style="margin-top:10px" onclick="confirmReset()">Kembali ke GameBoard Z</button>
   </div>
 
-  <footer class="hint">Investigasi Kejahatan · disinkronkan lewat Google Sheet</footer>
+  <footer class="hint">Game Board Z · Made in Caplang</footer>
 </div>
 
 <!-- FLOATING CRIME TILES VIEWER (mengikuti scroll, tidak perlu scroll ke atas) -->
@@ -3928,6 +4025,7 @@ function poll(){
   if(!state.roomId) return;
   api('get_room',{roomId:state.roomId}).then(function(res){
     if(!res.room) return;
+    if(res.room.game==='splendor'){ var j=JSON.stringify(res.room); if(j===state._lj && state.room) return; state._lj=j; }
     state.room = res.room;
     render();
   });
@@ -4846,7 +4944,7 @@ function spCostHtml(cost){
 function spCardTile(cardId, extraButtonsHtml){
   var card = spCardById(cardId);
   if(!card) return '<div class="sp-empty-slot">Habis</div>';
-  return '<div class="sp-card tier'+card.tier+'">'+
+  return '<div class="sp-card tier'+card.tier+' gem-'+card.bonus+'">'+
     '<div class="sp-points">'+(card.points>0?('★'+card.points):'')+'</div>'+
     '<div class="sp-bonus">'+SP_COLOR_INFO[card.bonus].emoji+'</div>'+
     '<div class="sp-cost">'+spCostHtml(card.cost)+'</div>'+
@@ -4884,7 +4982,7 @@ function renderSpBoard(room,m){
     var noble = spNobleById(nid);
     if(!noble) return '';
     var reqHtml = Object.keys(noble.require).map(function(c){ return SP_COLOR_INFO[c].emoji+noble.require[c]; }).join(' ');
-    return '<div class="sp-noble">★'+noble.points+'<br>'+reqHtml+'</div>';
+    return '<div class="sp-noble nb'+((noble.id||0)%3)+'">★'+noble.points+'<br>'+reqHtml+'</div>';
   }).join('') || '<p class="muted">Semua noble sudah diambil.</p>';
 
   [3,2,1].forEach(function(tier){
@@ -5089,7 +5187,7 @@ function shPoll(){
   // dengan request aksi itu sendiri (aksi lebih penting, biar cepat selesai).
   if (SH.screen!=="game" || !SH.roomId || SH.busy) return;
   shApi("sh_get_room",{}).then(function(res){
-    if (res.ok && res.room){ SH.room = res.room; shRender(); }
+    if (res.ok && res.room){ var j=JSON.stringify(res.room); if(j===SH._lj && SH.room) return; SH._lj=j; SH.room = res.room; shRender(); }
   });
 }
 setInterval(shPoll, 2500);
@@ -5375,7 +5473,7 @@ function shTrackHtml(c){
   });
   cells += '<div class="sh-cell split">$</div>';
   return '<div class="sh-row" style="flex-wrap:nowrap;margin-bottom:5px">'
-   + '<div class="sh-cname" style="background:'+c.color+'">'+shEsc(c.name)+'</div>'
+   + '<div class="sh-cname co-'+c.id+'" style="background:'+c.color+'">'+shEsc(c.name)+'</div>'
    + '<div class="sh-track">'+cells+'</div>'
    + '<div class="sh-badge" style="margin-left:6px">'+c.track[c.pos]+'k</div></div>';
 }
