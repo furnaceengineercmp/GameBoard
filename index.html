@@ -444,6 +444,28 @@ input.sh-in,select.sh-in{border-radius:10px}
 body.board-ro #screen-sp-board button{display:none!important}
 body.board-ro #spTakePanel,body.board-ro #spHandOpenPanel,body.board-ro #spHandLockedPanel{display:none!important}
 
+/* ---- chat melayang, banner pemain, token, tile, layout lebar ---- */
+#gbChatFab{position:fixed;right:14px;bottom:78px;z-index:9992;border-radius:999px;padding:10px 14px;font-size:16px;box-shadow:0 6px 18px #0008;background:linear-gradient(#4f8cff,#2563eb);color:#fff;border:0;cursor:pointer}
+#gbChatFab.unread{animation:gbpulse 1s infinite;background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1a0f00;font-weight:800}
+#gbChatPanel{position:fixed;right:14px;bottom:130px;z-index:9993;width:min(340px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px #000a;padding:10px;color:var(--paper)}
+#gbChatPanel .gc-head{display:flex;justify-content:space-between;align-items:center}#gbChatPanel .gc-head button{width:auto;padding:4px 10px}
+#gbChatLog{max-height:200px;overflow:auto;font-size:13px;margin:8px 0;text-align:left}#gbChatPanel .gc-in{display:flex;gap:6px}#gbChatPanel .gc-in input{flex:1;min-width:0}#gbChatPanel .gc-in button{width:auto}
+#lobbyChat{display:none!important}
+.who-banner{background:linear-gradient(90deg,#f59e0b33,#ef444433);border:1px solid var(--gold);border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:.95rem}
+.gl-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0}.gl-chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.78rem}
+.lg-chip{display:inline-flex;align-items:center;gap:6px;margin:3px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--paper);cursor:pointer}
+.lg-chip.on{border-color:var(--gold);box-shadow:0 0 12px #f59e0b88;background:#f59e0b22}.lg-chip:disabled{opacity:.35}
+.lg-sum{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--panel2);font-size:.85rem}
+.evidence.picked{outline:3px solid #22c55e;box-shadow:0 0 18px #22c55e99;transform:translateY(-3px)}.evidence.lg-off{opacity:.35;filter:grayscale(.6)}
+.evidence .deco{position:absolute!important;top:3px!important;left:8px!important;z-index:2;font-size:.58rem;padding:1px 7px;border-radius:6px}
+.evidence{padding-top:22px!important}
+.topt{display:inline-block;margin:3px 3px 0 0;padding:4px 9px;border-radius:999px;background:#ffffff14;border:1px solid #ffffff2a;font-size:.78rem;opacity:.78;transition:all .25s}
+.topt.sel{opacity:1;font-weight:700;background:hsl(var(--h,220) 80% 50%/.5);border-color:#fff;box-shadow:0 0 14px hsl(var(--h,220) 90% 60%/.8);transform:scale(1.06)}
+body.wide .wrap{max-width:1500px}
+body.wide .tiles-grid{grid-template-columns:repeat(3,1fr)}
+body.wide #allHandsWrap,body.wide #boardHands{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px}
+body.wide #guessLogCard{columns:2}
+
 </style>
 </head>
 <body>
@@ -1092,6 +1114,11 @@ function handle(p) {
       case 'update_player': result = withLock(p.roomId, function (room) { return updatePlayer(room, p); }); break;
       case 'start_game': result = withLock(p.roomId, function (room) { return room.game === 'serigala' ? sgStartGame(room, p) : (room.game === 'splendor' ? spStartGame(room, p) : startGame(room, p)); }); break;
       case 'ack': result = withLock(p.roomId, function (room) { return room.game === 'serigala' ? sgAck(room, p) : ackAction(room, p); }); break;
+      case 'ack_all': result = (function(){ var rm = getRoomState(p.roomId); if (!rm) return { ok: false, error: 'Room tidak ditemukan' }; var last = { ok: true }; rm.players.forEach(function (pl) { last = handle({ action: 'ack', roomId: p.roomId, playerId: pl.id, stage: p.stage }); }); return last; })(); break;
+      case 'sg_local_vote': result = (function(){ var rm = getRoomState(p.roomId); if (!rm) return { ok: false, error: 'Room tidak ditemukan' }; var last = { ok: true }; rm.players.filter(function (x) { return x.alive !== false; }).forEach(function (pl) { last = handle({ action: 'sg_vote', roomId: p.roomId, playerId: pl.id, targetId: p.targetId || 'skip' }); }); return last; })(); break;
+      case 'sg_local_night': result = (function(){ var last = { ok: true }; (p.actors || []).forEach(function (aid) { handle({ action: 'sg_night_action', roomId: p.roomId, playerId: aid, bucket: p.bucket, targetId: p.targetId || null, extra: p.extra || null }); if (p.finish !== false) last = handle({ action: 'sg_night_finish', roomId: p.roomId, playerId: aid }); }); return last; })(); break;
+      case 'sg_local_finish': result = (function(){ var last = { ok: true }; (p.actors || []).forEach(function (aid) { last = handle({ action: 'sg_night_finish', roomId: p.roomId, playerId: aid }); }); return last; })(); break;
+      case 'sg_preview': result = (function(){ var rm = getRoomState(p.roomId); if (!rm) return { ok: false }; var c = JSON.parse(JSON.stringify(rm)); c.privateResults = {}; try { sgResolveNightInternal(c); } catch (e) {} var arr = c.privateResults[p.playerId] || []; return { ok: true, note: arr.length ? arr[arr.length - 1].text : '' }; })(); break;
       case 'murderer_choose': result = withLock(p.roomId, function (room) { return murdererChoose(room, p); }); break;
       case 'forensic_choose': result = withLock(p.roomId, function (room) { return forensicChoose(room, p); }); break;
       case 'next_cycle': result = withLock(p.roomId, function (room) { return nextCycle(room, p); }); break;
@@ -1432,6 +1459,8 @@ function startGame(room, p) {
   roleDeck = shuffle(roleDeck).slice(0, room.players.length);
 
   var shuffledPlayers = shuffle(room.players.map(function (pl) { return pl.id; }));
+  var clueDeck = shuffle(master.clues.filter(function (v, i, a) { return a.indexOf(v) === i; }));
+  var meansDeck = shuffle(master.means.filter(function (v, i, a) { return a.indexOf(v) === i; }));
   var hands = {};
   shuffledPlayers.forEach(function (pid, idx) {
     var pl = room.players.find(function (x) { return x.id === pid; });
@@ -1440,7 +1469,7 @@ function startGame(room, p) {
     // Dokter Forensik tidak menerima kartu clue/means — tugasnya cuma mengatur crime tiles.
     hands[pid] = (pl.role === 'Dokter Forensik')
       ? { clues: [], means: [] }
-      : { clues: dealCards(master.clues, room.settings.cluesPerPlayer || 4), means: dealCards(master.means, room.settings.meansPerPlayer || 4) };
+      : { clues: takeCards(clueDeck, master.clues, room.settings.cluesPerPlayer || 4), means: takeCards(meansDeck, master.means, room.settings.meansPerPlayer || 4) };
   });
 
   room.hands = hands;
@@ -1465,6 +1494,18 @@ function startGame(room, p) {
   room.finalCallActive = false;
   room.winner = null;
   room.phase = 'role_reveal';
+}
+
+function takeCards(deck, pool, n) {
+  var cards = [];
+  for (var i = 0; i < n; i++) {
+    if (!deck.length) { var again = shuffle(pool.filter(function (v, k, a) { return a.indexOf(v) === k; })); again.forEach(function (x) { deck.push(x); }); }
+    var revealed = deck.pop();
+    var opts = sample(pool.filter(function (x) { return x !== revealed; }), 5);
+    opts.push(revealed);
+    cards.push({ options: shuffle(opts), revealed: revealed });
+  }
+  return cards;
 }
 
 function dealCards(pool, n) {
@@ -1557,6 +1598,8 @@ function submitGuess(room, p) {
   var correct = !isDecoyRole && room.murdererId === p.murdererId && room.murderChoice &&
     room.murderChoice.clue === p.clue && room.murderChoice.means === p.means;
   room.guesses[p.playerId] = { murdererId: p.murdererId, clue: p.clue, means: p.means, correct: correct, at: Date.now() };
+  room.guessLog = room.guessLog || [];
+  room.guessLog.push({ by: p.playerId, murdererId: p.murdererId, clue: p.clue, means: p.means, at: Date.now() });
 
   if (correct) {
     room.correctGuesserId = p.playerId;
@@ -3460,10 +3503,11 @@ var GB=(function(){
  }
  function mutate(p,id){
   var r=ref(id),result;
-  return r.once('value').then(function(){
+  return (subs[id]?Promise.resolve():r.once('value')).then(function(){
    return r.transaction(function(cur){
     E.setCtx(id,parse(cur));result=E.handle(p);var c=E.getCtx();
     if(!c.saved)return; // ditolak / tidak ada perubahan
+    delete c.room.cardDefs;delete c.room.nobleDefs; // jangan simpan definisi kartu Splendor (membuat data bengkak)
     return {s:JSON.stringify(c.room),m:meta(c.room)};
    },null,false);
   }).then(function(){return result;});
@@ -3486,7 +3530,8 @@ var GB=(function(){
  var chatRefs={};
  function listRooms(){return ready.then(function(){return db.ref('gb/rooms').once('value');}).then(function(s){var a=[];s.forEach(function(c){var v=c.val()||{},m=v.m||{};a.push({id:c.key,game:m.game,phase:m.phase,n:m.n,t:m.t});});return a;});}
  function deleteRoom(id){return ready.then(function(){return Promise.all([db.ref('gb/rooms/'+id).remove(),db.ref('gb/chat/'+id).remove().catch(function(){})]);});}
- function chatSub(id,cb){ready.then(function(){if(chatRefs[id])chatRefs[id].off();var r=db.ref('gb/chat/'+id).limitToLast(30);chatRefs[id]=r;r.on('value',function(s){var a=[];s.forEach(function(x){a.push(x.val());});cb(a);});});}
+ var chatCbs={};
+ function chatSub(id,cb){(chatCbs[id]=chatCbs[id]||[]).push(cb);if(chatRefs[id])return;ready.then(function(){var r=db.ref('gb/chat/'+id).limitToLast(30);chatRefs[id]=r;r.on('value',function(s){var a=[];s.forEach(function(x){a.push(x.val());});chatCbs[id].forEach(function(f){f(a);});});});}
  function chatSend(id,n,c,t){ready.then(function(){db.ref('gb/chat/'+id).push({n:String(n).slice(0,14),c:String(c).slice(0,9),t:String(t).slice(0,120),ts:firebase.database.ServerValue.TIMESTAMP});});}
  return {call:call,listRooms:listRooms,deleteRoom:deleteRoom,chatSub:chatSub,chatSend:chatSend};
 })();
@@ -3505,8 +3550,8 @@ function gbEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){retu
  var tb=document.createElement('div');tb.id='gbTurn';tb.textContent='🟢 GILIRANMU';document.body.appendChild(tb);
  window.gbTurn=function(on){tb.style.display=on?'block':'none';};
 })();
-function gbModal(html){var d=document.createElement('div');d.className='gb-overlay';d.onclick=function(e){if(e.target===d)d.remove();};
- d.innerHTML='<div class="card" style="max-width:440px;width:100%;max-height:82vh;overflow:auto">'+html+'<button class="btn" style="margin-top:12px;width:100%" onclick="this.closest(\'.gb-overlay\').remove()">Tutup</button></div>';document.body.appendChild(d);}
+function gbModal(html,onClose){var d=document.createElement('div');d.className='gb-overlay';var close=function(){d.remove();if(onClose)onClose();};d.onclick=function(e){if(e.target===d)close();};
+ d.innerHTML='<div class="card" style="max-width:440px;width:100%;max-height:82vh;overflow:auto">'+html+'<button class="btn gb-close" style="margin-top:12px;width:100%">Tutup</button></div>';d.querySelector('.gb-close').onclick=close;document.body.appendChild(d);}
 /* ---- chat ruang tunggu ---- */
 var _chatRoom=null;
 function lobbyChatInit(room){
@@ -3530,6 +3575,8 @@ function shPower(pid){var p=shPl(pid);if(!p)return;
 /* ===== SERIGALA 1 TABLET: alur moderator ===== */
 /* SG_NIGHT_ORDER dipakai klien (narator/hint malam) tapi dulu tidak pernah didefinisikan -> ReferenceError saat malam tiba (penyebab game macet setelah malam) */
 var SG_NIGHT_ORDER=['penerawang','bodoh','penghibur','ormas_anti_sekte','sekte','pembunuh_berantai','dukun','serigala','dokter','detektif','penembak','pemimpin_serigala'];
+var SGL_ORDER=SG_NIGHT_ORDER.filter(function(b){return b!=='detektif';}).concat(['detektif']);
+var SGL_INFO=['penerawang','bodoh','detektif'];
 var SGL={seen:{},nightKey:'',prev:null,dukun:null,said:'',busy:false};
 var SGL_DESC={penerawang:'Ketuk pemain yang ingin dilihat role aslinya.',bodoh:'Ketuk pemain yang ingin “diterawang”.',penghibur:'Ketuk rumah yang ingin dikunjungi.',
  ormas_anti_sekte:'Diam di rumah, atau ketuk rumah yang dicurigai Sekte.',sekte:'Diam di rumah, atau ketuk warga yang ingin direkrut.',pembunuh_berantai:'Ketuk korban malam ini.',
@@ -3540,7 +3587,7 @@ function sgLocalAlive(room){return room.players.filter(function(p){return p.aliv
 function sgLocalBucket(a){if(a.isCultChief)return 'sekte';
  return ['serigala','penerawang','bodoh','penghibur','ormas_anti_sekte','pembunuh_berantai','dukun','dokter','detektif','penembak','pemimpin_serigala'].indexOf(a.role)>=0?a.role:null;}
 function sgLocalPending(room){var alive=sgLocalAlive(room);
- for(var i=0;i<SG_NIGHT_ORDER.length;i++){var b=SG_NIGHT_ORDER[i];
+ for(var i=0;i<SGL_ORDER.length;i++){var b=SGL_ORDER[i];
   var actors=alive.filter(function(a){if(a.role==='penembak'&&a.bullets<=0)return false;return sgLocalBucket(a)===b&&!(room.nightAcks&&room.nightAcks[a.id]);});
   if(actors.length)return {bucket:b,actors:actors};}
  return null;}
@@ -3554,19 +3601,26 @@ function sgLocalViewRole(pid){var room=state.room,pl=room.players.find(function(
  showScreen('sg-role');renderSgRole(room,pl);var b=document.getElementById('sgRoleOkBtn');b.setAttribute('onclick','sgLocalCloseRole()');b.textContent='Tutup & serahkan tablet';b.classList.remove('hidden');
  document.getElementById('sgRoleWaitNote').classList.add('hidden');}
 function sgLocalCloseRole(){SGL.seen[SGL.viewing]=true;SGL.viewing=null;renderSgLocal(state.room);}
-function sgLocalBegin(){return state.room.players.reduce(function(pr,p){return pr.then(function(){return api('ack',{roomId:state.roomId,playerId:p.id,stage:'role'});});},Promise.resolve()).then(poll);}
+function sgLocalBegin(){return api('ack_all',{roomId:state.roomId,stage:'role'}).then(poll);}
 function sgLocalReady(pid){var p=state.room.players.find(function(x){return x.id===pid;});api('update_player',{roomId:state.roomId,playerId:pid,ready:!p.ready}).then(poll);}
 function sgLocalStart(){api('start_game',{roomId:state.roomId}).then(function(res){if(!res.ok)gbToast(res.error||'Gagal memulai');poll();});}
 function sgLocalNightGo(){SGL.nightKey='n'+(state.room.dayNumber||1);SGL.prev=null;SGL.dukun=null;renderSgLocal(state.room);}
-function sgLocalSubmit(bucket,targetId,extra){if(SGL.busy)return Promise.resolve();var room=state.room,pend=sgLocalPending(room);if(!pend||pend.bucket!==bucket)return;
- SGL.busy=true;SGL.prev=bucket==='serigala'?'Serigala':(bucket==='sekte'?'Kepala Sekte':SG_ROLES[bucket].name);SGL.dukun=null;
- return pend.actors.reduce(function(pr,a){return pr.then(function(){return api('sg_night_action',{roomId:state.roomId,playerId:a.id,bucket:bucket,targetId:targetId,extra:extra||null});})
-  .then(function(){return api('sg_night_finish',{roomId:state.roomId,playerId:a.id});});},Promise.resolve()).then(function(){SGL.busy=false;poll();});}
+function sgLocalSubmit(bucket,targetId,extra){
+ if(SGL.busy)return Promise.resolve();var room=state.room,pend=sgLocalPending(room);if(!pend||pend.bucket!==bucket)return Promise.resolve();
+ SGL.busy=true;var ids=pend.actors.map(function(a){return a.id;});
+ SGL.prev=bucket==='serigala'?'Serigala':(bucket==='sekte'?'Kepala Sekte':SG_ROLES[bucket].name);SGL.dukun=null;
+ var base={roomId:state.roomId,actors:ids,bucket:bucket,targetId:targetId,extra:extra||null};
+ var done=function(){SGL.busy=false;return poll();};
+ if(SGL_INFO.indexOf(bucket)>=0&&targetId&&targetId!=='stay'){
+  return api('sg_local_night',Object.assign({finish:false},base)).then(function(){return api('sg_preview',{roomId:state.roomId,playerId:ids[0]});}).then(function(res){
+   gbModal('<h3 style="margin-top:0">🔒 Hasil untukmu</h3><p style="font-size:1.1rem">'+gbEsc(res.note||'Tidak ada informasi.')+'</p><p class="muted small-note">Setelah ditutup, peran berikutnya dipanggil.</p>',function(){api('sg_local_finish',{roomId:state.roomId,actors:ids}).then(done);});});}
+ return api('sg_local_night',base).then(done);
+}
 function sgLocalDukun(tid){SGL.dukun=tid;renderSgLocal(state.room);}
 function sgLocalResolveNight(){api('sg_resolve_night',{roomId:state.roomId}).then(poll);}
 function sgLocalExecute(tid){var room=state.room,t=room.players.find(function(p){return p.id===tid;});
  if(!confirm(t?'Gantung '+t.name+'?':'Tidak ada yang digantung?'))return Promise.resolve();
- return sgLocalAlive(room).reduce(function(pr,a){return pr.then(function(){return api('sg_vote',{roomId:state.roomId,playerId:a.id,targetId:t?tid:'skip'});});},Promise.resolve()).then(poll);}
+ return api('sg_local_vote',{roomId:state.roomId,targetId:t?tid:'skip'}).then(poll);}
 function sgLocalNotes(pid){var pr=(state.room.privateResults||{})[pid]||[];var p=state.room.players.find(function(x){return x.id===pid;});
  gbModal('<h3 style="margin-top:0">🔒 Catatan rahasia '+gbEsc(p?p.name:'')+'</h3>'+pr.slice().reverse().map(function(n){return '<div class="history-item">'+n.text+'</div>';}).join(''));}
 function renderSgLocal(room){
@@ -3576,9 +3630,6 @@ function renderSgLocal(room){
  var dummy={id:null,alive:true,role:null};
  if(ph==='day_result'){showScreen('sg-dayresult');renderSgDayResult(room,dummy);return;}
  if(ph==='night_reveal'){showScreen('sg-nightreveal');renderSgNightReveal(room,dummy);
-  var pr=room.privateResults||{},ids=Object.keys(pr).filter(function(id){return pr[id]&&pr[id].length;});
-  if(ids.length)document.getElementById('sgNightRevealBody').innerHTML+='<h4 style="color:var(--gold);margin:14px 0 4px">🔒 Catatan rahasia</h4><p class="muted">Ketuk nama pemilik catatan (yang lain tutup mata).</p>'
-   +ids.map(function(id){var p=room.players.find(function(x){return x.id===id;});return p?sgLocalBtn("sgLocalNotes('"+id+"')",p.color,gbEsc(p.name)):'';}).join('');
   return;}
  if(ph==='ended'){showScreen('sg-ended');renderSgEnded(room,dummy);if(!state.endedResetTimer)state.endedResetTimer=setTimeout(function(){state.endedResetTimer=null;doReset();},5*60*1000);return;}
  showScreen('sg-local');
@@ -3643,16 +3694,20 @@ var TILE_RULES=[['kehilangan banyak darah','🩸'],['noda darah','🩸'],['jejak
 function tileArt(cat,opt){var k=(cat+' | '+opt).toLowerCase();
  for(var i=0;i<TILE_RULES.length;i++){if(k.indexOf(TILE_RULES[i][0])>=0)return {e:TILE_RULES[i][1],fx:TILE_RULES[i][2]||''};}
  return {e:TILE_CAT_E[cat]||'🧩',fx:''};}
+function tileOptsHtml(tile,idx,isForensic){var chosen=tile.chosen!==null;
+ return '<div class="tile-opts">'+tile.options.map(function(o,oi){var a=tileArt(tile.category,o);
+  if(!chosen&&isForensic)return '<button class="opt-btn" onclick="doForensicChoose('+idx+','+oi+')">'+a.e+' '+o+'</button>';
+  return '<span class="topt'+(chosen&&oi===tile.chosen?' sel':'')+'">'+a.e+' '+o+'</span>';}).join('')+'</div>';}
 function buildTilesHtml(room,isForensic){
  return room.crimeTiles.map(function(tile,idx){
   var h=TILE_HUE[tile.category];if(h===undefined)h=220;
   var chosen=tile.chosen!==null,art=chosen?tileArt(tile.category,tile.options[tile.chosen]):{e:TILE_CAT_E[tile.category]||'🧩',fx:''};
   var html='<div class="tile'+(tile.fixed?' fixed':'')+(chosen?' revealed':' wait')+(art.fx?' fx-'+art.fx:'')+'" style="--h:'+h+'"><i class="tbg">'+art.e+'</i>';
   html+='<div class="cat">'+tile.category+(tile.fixed?' (wajib)':'')+'</div>';
-  if(chosen){html+='<div class="chosen">'+art.e+' '+tile.options[tile.chosen]+'</div>';
-   if(isForensic&&!tile.fixed)html+='<div style="margin-top:8px"><button class="btn secondary small" onclick="doSwap('+idx+')">Ganti Tile Ini</button></div>';}
-  else if(isForensic){html+='<div class="tile-opts">'+tile.options.map(function(o,oi){return '<button class="opt-btn" onclick="doForensicChoose('+idx+','+oi+')">'+tileArt(tile.category,o).e+' '+o+'</button>';}).join('')+'</div>';}
-  else html+='<div class="small-note">Menunggu Dokter Forensik…</div>';
+  if(chosen)html+='<div class="chosen">'+art.e+' '+tile.options[tile.chosen]+'</div>';
+  else if(!isForensic)html+='<div class="small-note">Menunggu Dokter Forensik…</div>';
+  html+=tileOptsHtml(tile,idx,isForensic);
+  if(chosen&&isForensic&&!tile.fixed)html+='<div style="margin-top:8px"><button class="btn secondary small" onclick="doSwap('+idx+')">Ganti Tile Ini</button></div>';
   return html+'</div>';}).join('');
 }
 /* ---- 1 tablet: lobi (ketuk nama = siap) & cek peran, dipakai Investigasi + Splendor ---- */
@@ -3676,7 +3731,7 @@ function renderLocalCommon(room){
 function lcViewRole(pid){var room=state.room,pl=room.players.find(function(p){return p.id===pid;});LC.viewing=pid;
  showScreen('role');renderRole(room,pl);var b=document.getElementById('roleOkBtn');b.setAttribute('onclick','lcCloseRole()');b.textContent='Tutup & serahkan tablet';b.classList.remove('hidden');document.getElementById('roleWaitNote').classList.add('hidden');}
 function lcCloseRole(){LC.seen[LC.viewing]=true;LC.viewing=null;renderLocalCommon(state.room);}
-function lcBegin(){return state.room.players.reduce(function(pr,p){return pr.then(function(){return api('ack',{roomId:state.roomId,playerId:p.id,stage:'role'});});},Promise.resolve()).then(poll);}
+function lcBegin(){return api('ack_all',{roomId:state.roomId,stage:'role'}).then(poll);}
 /* ---- mode Papan (tablet) + HP pribadi ---- */
 function boardPlayers(room,extra){return '<div>'+room.players.map(function(p){return '<span class="sg-player-row'+(p.alive===false?' dead':'')+'" style="display:inline-block;margin:3px"><span class="dot" style="background:'+p.color+'"></span>'+gbEsc(p.name)+(extra?extra(p):'')+(p.alive===false?' 💀':'')+'</span>';}).join('')+'</div>';}
 function doBoardJoin(){var id=document.getElementById('gRoomId').value.trim(),err=document.getElementById('gJoinErr');
@@ -3709,7 +3764,7 @@ function renderBoard(room){
   if(ph==='cards'){T.textContent='🃏 Pemain memilih kartu di HP';B.innerHTML=boardPlayers(room,ack('cards'));return;}
   if(ph==='witness_guess'){T.textContent='🕵️ Saksi sedang menebak…';B.innerHTML='<p class="muted">Menunggu tebakan Saksi.</p>';return;}
   T.textContent='🔎 Investigasi — Cycle '+room.cycle;
-  B.innerHTML=(ph==='final_call'?'<div class="sg-death-item">⏱ Investigasi ditutup — segera tebak jika belum!</div>':'')+'<div class="tiles-grid">'+buildTilesHtml(room,false)+'</div><h3 style="color:var(--gold)">Semua Kartu Pemain</h3><div id="boardHands"></div>';
+  B.innerHTML=(ph==='final_call'?'<div class="sg-death-item">⏱ Investigasi ditutup — segera tebak jika belum!</div>':'')+'<div class="tiles-grid">'+buildTilesHtml(room,false)+'</div><div class="card" style="margin:10px 0">'+guessLogHtml(room)+'</div><h3 style="color:var(--gold)">Semua Kartu Pemain</h3><div id="boardHands"></div>';
   renderAllHands(room,'boardHands');return;}
  if(g==='serigala'){
   var alive=room.players.filter(function(p){return p.alive!==false;}).length;
@@ -3724,6 +3779,81 @@ function renderBoard(room){
  }
  T.textContent='📺 Papan';B.innerHTML='<p class="muted">Fase: '+gbEsc(ph)+'</p>'+boardPlayers(room);
 }
+
+</script>
+<script>
+/* ===== PERBAIKAN: tebakan & token publik, chat melayang, 1 device Investigasi, hasil malam instan ===== */
+function gbToastOnce(t){window.gbToast(t);}
+/* ---- chat melayang (semua mode kecuali 1 device) ---- */
+var GC={open:false,unread:0,room:null,n:0,first:true};
+function gbChatRoomId(){
+ if(window.state&&state.localMode)return null;
+ if(window.state&&state.roomId&&state.room&&(state.boardMode||state.playerId))return state.roomId;
+ if(window.SH&&SH.roomId&&SH.role&&SH.role!=='ALL'&&SH.screen&&SH.screen!=='home'&&SH.screen!=='join')return SH.roomId;
+ return null;}
+function gbChatName(){
+ if(state.boardMode)return ['📺 Papan','#f59e0b'];
+ if(state.playerId&&typeof me==='function'){var m=me();if(m)return [m.name,m.color];}
+ if(window.SH&&SH.playerId&&typeof shPl==='function'){var p=shPl(SH.playerId);if(p)return [p.name,p.color];}
+ return ['📺 Papan','#f59e0b'];}
+function gbChatSync(){
+ var fab=document.getElementById('gbChatFab');if(!fab)return;var id=gbChatRoomId();
+ fab.style.display=id?'block':'none';if(!id){document.getElementById('gbChatPanel').style.display='none';GC.room=null;return;}
+ if(GC.room!==id){GC.room=id;GC.n=0;GC.first=true;GC.unread=0;
+  GB.chatSub(id,function(list){var el=document.getElementById('gbChatLog');
+   el.innerHTML=list.map(function(m){return '<div><b style="color:'+gbEsc(m.c)+'">'+gbEsc(m.n)+'</b>: '+gbEsc(m.t)+'</div>';}).join('')||'<span class="muted">Belum ada pesan.</span>';el.scrollTop=el.scrollHeight;
+   if(!GC.first&&list.length>GC.n&&!GC.open)GC.unread+=list.length-GC.n;GC.first=false;GC.n=list.length;gbChatBadge();});}
+}
+function gbChatBadge(){var f=document.getElementById('gbChatFab');f.textContent='💬'+(GC.unread?' '+GC.unread:'');f.classList.toggle('unread',GC.unread>0);}
+function gbChatToggle(){GC.open=!GC.open;document.getElementById('gbChatPanel').style.display=GC.open?'block':'none';if(GC.open){GC.unread=0;gbChatBadge();var el=document.getElementById('gbChatLog');el.scrollTop=el.scrollHeight;}}
+function gbChatSend(){var i=document.getElementById('gbChatInput'),t=i.value.trim();if(!t||!GC.room)return;var n=gbChatName();GB.chatSend(GC.room,n[0],n[1],t);i.value='';}
+(function(){var f=document.createElement('button');f.id='gbChatFab';f.textContent='💬';f.onclick=gbChatToggle;f.style.display='none';document.body.appendChild(f);
+ var p=document.createElement('div');p.id='gbChatPanel';p.style.display='none';
+ p.innerHTML='<div class="gc-head"><b>💬 Chat room</b><button onclick="gbChatToggle()">✕</button></div><div id="gbChatLog"></div><div class="gc-in"><input id="gbChatInput" maxlength="120" placeholder="Ketik pesan…" onkeydown="if(event.keyCode==13)gbChatSend()"><button onclick="gbChatSend()">Kirim</button></div>';
+ document.body.appendChild(p);setInterval(gbChatSync,1500);})();
+/* ---- Investigasi: token & tebakan publik ---- */
+function gbTokDots(n){var s='';for(var i=0;i<2;i++)s+='<span class="token'+(i<n?'':' spent')+'" style="display:inline-block;margin:0 2px"></span>';return s;}
+function guessLogHtml(room){
+ var ps=room.players.filter(function(p){return p.role&&ELIGIBLE_GUESS_ROLES.indexOf(p.role)!==-1;}),log=room.guessLog||[];
+ var nm=function(id){var p=room.players.find(function(x){return x.id===id;});return p?gbEsc(p.name):'?';};
+ return '<h4 style="margin:0 0 8px;color:var(--gold)">🎟 Token & Tebakan</h4>'+ps.map(function(p){
+  var mine=log.filter(function(g){return g.by===p.id;});
+  return '<div class="gl-row"><span class="dot" style="background:'+p.color+'"></span><b>'+gbEsc(p.name)+'</b> '+gbTokDots(p.tokensLeft)+(mine.length?mine.map(function(g){return '<span class="gl-chip">🕵 '+nm(g.murdererId)+' · '+gbEsc(g.clue)+' + '+gbEsc(g.means)+'</span>';}).join(''):'<span class="muted small-note"> belum menebak</span>')+'</div>';}).join('');}
+function ensureInvExtras(room,m){
+ var sc=document.getElementById('screen-investigation');
+ if(!document.getElementById('invWho')){var d=document.createElement('div');d.id='invWho';d.className='who-banner';sc.insertBefore(d,sc.firstChild);}
+ if(!document.getElementById('guessLogCard')){var g=document.createElement('div');g.id='guessLogCard';g.className='card';var aw=document.getElementById('allHandsWrap');aw.parentNode.parentNode.insertBefore(g,aw.parentNode);}
+ if(!document.getElementById('localGuessCard')){var l=document.createElement('div');l.id='localGuessCard';l.className='card hidden';var aw2=document.getElementById('allHandsWrap');aw2.parentNode.parentNode.insertBefore(l,aw2.parentNode);}
+ document.getElementById('invWho').innerHTML=state.localMode?'📺 <b>Mode 1 device</b> — tampilan Dokter Forensik. Pilih pemilik token, lalu ketuk clue + means milik <b>satu pemain yang sama</b>.':'👤 Kamu: <b>'+gbEsc(m.name)+'</b> · Peran: <b>'+gbEsc(m.role)+'</b>';
+ document.getElementById('guessLogCard').innerHTML=guessLogHtml(room);
+ var lc=document.getElementById('localGuessCard');lc.classList.toggle('hidden',!state.localMode);if(state.localMode)lgRender(room);
+}
+/* ---- 1 device Investigasi: tebak langsung dari tampilan Dokter Forensik ---- */
+var LG={guesser:null,suspect:null,clue:null,means:null};
+function lgRender(room){
+ var lc=document.getElementById('localGuessCard');
+ var ps=room.players.filter(function(p){return p.role&&p.role!=='Dokter Forensik';});
+ var sus=LG.suspect?room.players.find(function(p){return p.id===LG.suspect;}):null;
+ lc.innerHTML='<h4 style="margin:0 0 8px;color:var(--gold)">🎯 Pakai Token</h4><div class="muted small-note">1. Siapa yang memakai token?</div>'
+  +ps.map(function(p){return '<button class="lg-chip'+(LG.guesser===p.id?' on':'')+'" '+(p.tokensLeft>0?'':'disabled ')+'onclick="lgGuesser(\''+p.id+'\')"><span class="dot" style="background:'+p.color+'"></span>'+gbEsc(p.name)+' '+gbTokDots(p.tokensLeft)+'</button>';}).join('')
+  +'<div class="muted small-note" style="margin-top:8px">2. Ketuk 1 clue dan 1 means pada kartu <b>pemain yang sama</b> (tersangka) di bawah.</div>'
+  +'<div class="lg-sum">'+(LG.guesser?'Penebak: <b>'+gbEsc(room.players.find(function(p){return p.id===LG.guesser;}).name)+'</b>':'<i>belum pilih penebak</i>')+' · Tersangka: <b>'+(sus?gbEsc(sus.name):'—')+'</b> · Clue: <b>'+gbEsc(LG.clue||'—')+'</b> · Means: <b>'+gbEsc(LG.means||'—')+'</b></div>'
+  +'<button class="btn" style="margin-top:8px" '+(LG.guesser&&LG.suspect&&LG.clue&&LG.means?'':'disabled ')+'onclick="lgSubmit()">✅ Kunci Tebakan</button> <button class="btn secondary small" onclick="lgReset()">Ulangi</button>';
+ lgMark();}
+function lgMark(){document.querySelectorAll('#allHandsWrap .evidence[data-pid]').forEach(function(e){
+ var pid=e.dataset.pid,t=e.dataset.type,txt=e.dataset.text;
+ e.classList.toggle('picked',LG.suspect===pid&&LG[t]===txt);
+ e.classList.toggle('lg-off',!!(LG.guesser===pid||(LG.suspect&&LG.suspect!==pid)));});}
+function lgGuesser(id){LG.guesser=id;if(LG.suspect===id){LG.suspect=LG.clue=LG.means=null;}lgRender(state.room);}
+function lgReset(){LG={guesser:null,suspect:null,clue:null,means:null};lgRender(state.room);}
+function lgPick(el){var pid=el.dataset.pid,t=el.dataset.type,txt=el.dataset.text;
+ if(!LG.guesser){gbToast('Pilih dulu siapa yang memakai token');return;}
+ if(pid===LG.guesser){gbToast('Penebak tidak bisa menuduh dirinya sendiri');return;}
+ if(LG.suspect&&LG.suspect!==pid){gbToast('Clue dan means harus dari pemain yang sama');return;}
+ if(LG.suspect===pid&&LG[t]===txt){LG[t]=null;if(!LG.clue&&!LG.means)LG.suspect=null;}else{LG.suspect=pid;LG[t]=txt;}
+ lgRender(state.room);}
+function lgSubmit(){var g=LG;api('submit_guess',{roomId:state.roomId,playerId:g.guesser,murdererId:g.suspect,clue:g.clue,means:g.means}).then(function(res){
+ if(!res.ok)gbToast(res.error||'Tebakan gagal');else gbToast('Tebakan dikunci','ok');LG={guesser:null,suspect:null,clue:null,means:null};poll();});}
 
 </script>
 <script>
@@ -3773,6 +3903,8 @@ function api(action, params){
 
 /* ================= SCREEN MGMT ================= */
 function showScreen(name){
+  document.body.classList.toggle('wide', !!(state.boardMode||state.localMode));
+  if(typeof gbChatSync==='function') gbChatSync();
   document.querySelectorAll('[id^="screen-"]').forEach(function(el){ el.classList.add('hidden'); });
   var el = document.getElementById('screen-'+name);
   if(el) el.classList.remove('hidden');
@@ -4191,7 +4323,7 @@ function doLocalSetupJoin(){
     if(res.room.phase!=='lobby'){ err.textContent='Game sudah dimulai'; return; }
     var taken = res.room.players.map(function(p){return p.color;});
     var avail = COLORS.filter(function(c){ return taken.indexOf(c)===-1; });
-    if(avail.length < names.length){ err.textContent='Warna tidak cukup untuk semua nama'; return; }
+    for(var _k=0; avail.length < names.length; _k++){ avail.push('hsl('+((_k*47+15)%360)+',65%,52%)'); }
     var localPlayers = [];
     var chain = Promise.resolve();
     names.forEach(function(name, i){
@@ -4348,7 +4480,12 @@ function render(){
   }
 
   if(room.game==='serigala') sgNarrate(room);
+  document.body.classList.toggle('wide', !!(state.boardMode||state.localMode));
   if(state.boardMode){ renderBoard(room); return; }
+  if(state.localMode && room.game==='investigasi'){
+    if(room.phase==='investigation' || room.phase==='final_call'){ if(!state.playerId && room.forensicId){ state.playerId=room.forensicId; state._autoForensic=true; } }
+    else if(state._autoForensic){ state.playerId=null; state._autoForensic=false; }
+  }
   if(state.localMode && room.game!=='serigala' && (room.phase==='lobby' || (room.game==='investigasi' && room.phase==='role_reveal'))){ renderLocalCommon(room); return; }
   if(state.localMode && room.game==='serigala'){ renderSgLocal(room); return; }
   document.getElementById('switchPlayerLink').classList.toggle('hidden',
@@ -4682,6 +4819,7 @@ function playerName(room,id){ var p = room.players.find(function(x){return x.id=
 
 /* ---- investigation ---- */
 function renderInvestigation(room,m){
+  ensureInvExtras(room,m);
   document.getElementById('cycleBadge').textContent = 'Cycle '+room.cycle;
   document.getElementById('finalCallBanner').classList.toggle('hidden', room.phase!=='final_call');
 
@@ -4739,7 +4877,7 @@ function renderInvestigation(room,m){
 function renderAllHands(room,wid){
   var wrap = document.getElementById(wid||'allHandsWrap');
   if(!wrap) return;
-  var _sg = JSON.stringify([room.hands,room.players.map(function(p){return p.id;})]); if(wrap.dataset.sig===_sg) return; wrap.dataset.sig=_sg;
+  var _sg = JSON.stringify([room.hands,room.players.map(function(p){return p.id;}),!!state.localMode]); if(wrap.dataset.sig===_sg){ if(typeof lgMark==='function') lgMark(); return; } wrap.dataset.sig=_sg;
   wrap.innerHTML='';
   room.players.forEach(function(p){
     var hand = room.hands ? room.hands[p.id] : null;
@@ -4749,10 +4887,10 @@ function renderAllHands(room,wid){
     var head = '<div class="phb-head"><span class="dot" style="background:'+p.color+'"></span><b>'+p.name+'</b></div>';
     var gridHtml = '<div class="hand-grid">';
     (hand.clues||[]).forEach(function(c,i){
-      gridHtml += '<div class="evidence evidence-clue small"><span class="deco">CLUE #'+(i+1)+'</span>'+evidenceIconHtml(c.revealed,26)+'<span class="ev-text">'+c.revealed+'</span></div>';
+      gridHtml += '<div class="evidence evidence-clue small" data-pid="'+p.id+'" data-type="clue" data-text="'+gbEsc(c.revealed)+'"'+(state.localMode?' onclick="lgPick(this)"':'')+'><span class="deco">CLUE #'+(i+1)+'</span>'+evidenceIconHtml(c.revealed,26)+'<span class="ev-text">'+c.revealed+'</span></div>';
     });
     (hand.means||[]).forEach(function(c,i){
-      gridHtml += '<div class="evidence evidence-means small"><span class="deco">MEANS #'+(i+1)+'</span>'+evidenceIconHtml(c.revealed,26)+'<span class="ev-text">'+c.revealed+'</span></div>';
+      gridHtml += '<div class="evidence evidence-means small" data-pid="'+p.id+'" data-type="means" data-text="'+gbEsc(c.revealed)+'"'+(state.localMode?' onclick="lgPick(this)"':'')+'><span class="deco">MEANS #'+(i+1)+'</span>'+evidenceIconHtml(c.revealed,26)+'<span class="ev-text">'+c.revealed+'</span></div>';
     });
     gridHtml += '</div>';
     if(!(hand.clues||[]).length && !(hand.means||[]).length){
