@@ -413,6 +413,37 @@ input.sh-in,select.sh-in{border-radius:10px}
 .chat-log{max-height:150px;overflow:auto;font-size:13px;margin:8px 0;text-align:left}
 .sh-pw{background:#f59e0b;color:#1a0f00;border:0;border-radius:50%;width:22px;height:22px;font-weight:900;font-size:12px;cursor:pointer;margin-left:4px}
 
+/* ---- Investigasi: crime tiles & kartu bukti ---- */
+.tile{position:relative;overflow:hidden;isolation:isolate;border-radius:14px;min-height:96px;color:#f3f0ff;background:linear-gradient(145deg,hsl(var(--h,220) 45% 24%),hsl(var(--h,220) 50% 11%));border:1px solid hsl(var(--h,220) 40% 35%);transition:transform .2s,box-shadow .2s}
+.tile:hover{transform:translateY(-3px);box-shadow:0 8px 20px #0008}
+.tile .tbg{position:absolute;right:-4px;bottom:-12px;font-style:normal;font-size:86px;opacity:.3;z-index:-1;animation:gbfloat 4s ease-in-out infinite}
+.tile.wait .tbg{opacity:.14}.tile .cat{color:#ffffffb0}.tile .chosen{color:#fff;font-size:1.08rem;font-weight:700;text-shadow:0 2px 6px #000b;margin-top:8px}
+.tile.revealed{border-color:hsl(var(--h,220) 75% 58%);box-shadow:0 0 16px hsl(var(--h,220) 80% 50%/.35);animation:tilereveal .6s}
+@keyframes tilereveal{0%{transform:rotateY(90deg) scale(.85);opacity:0}100%{transform:none;opacity:1}}
+.tile .opt-btn{background:#ffffff18;color:#fff;border:1px solid #ffffff3a;border-radius:10px}.tile .opt-btn:hover{background:#ffffff30;transform:scale(1.04)}
+.tile::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none}
+.tile.fx-rain::after{background:repeating-linear-gradient(105deg,transparent 0 9px,rgba(170,200,255,.4) 9px 10px);background-size:60px 60px;animation:rainfall .55s linear infinite}
+.tile.fx-storm::after{background:repeating-linear-gradient(105deg,transparent 0 9px,rgba(170,200,255,.4) 9px 10px),linear-gradient(#fff,#fff);background-size:60px 60px,100% 100%;animation:rainfall .45s linear infinite,flash 3s infinite}
+.tile.fx-fog::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);background-size:200% 100%;animation:fogmove 6s linear infinite}
+.tile.fx-sun::after{background:radial-gradient(circle at 85% 15%,rgba(255,214,90,.6),transparent 55%);animation:gbbeat2 3s ease-in-out infinite}
+.tile.fx-night::after{background:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(2px 2px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 45% 70%,#fff,transparent),radial-gradient(2px 2px at 85% 60%,#fff,transparent);animation:twinkle 2.4s ease-in-out infinite}
+.tile.fx-dark::after{background:rgba(0,0,0,.55)}.tile.fx-dim::after{background:radial-gradient(circle,transparent 30%,rgba(0,0,0,.5))}
+.tile.fx-blink::after{background:rgba(255,230,120,.3);animation:blinkl 1s steps(2) infinite}
+@keyframes rainfall{to{background-position:-20px 60px,0 0}}@keyframes flash{0%,92%,100%{opacity:0}94%,98%{opacity:.5}}@keyframes fogmove{to{background-position:-200% 0}}
+@keyframes gbbeat2{50%{opacity:.5}}@keyframes twinkle{50%{opacity:.35}}@keyframes blinkl{50%{opacity:0}}
+.evidence{position:relative;display:flex;align-items:center;gap:10px;border-radius:12px;padding:16px 12px 12px;min-height:64px;font-weight:700;box-shadow:0 4px 12px #0006;transition:transform .2s,box-shadow .2s;animation:evflip .55s backwards;overflow:hidden;isolation:isolate}
+.evidence.evidence-clue{background:linear-gradient(145deg,#f7e9c2,#e0c98a);color:#2b2208;border:2px solid #b8923a}
+.evidence.evidence-means{background:linear-gradient(145deg,#1d5568,#0c2a36);color:#e6fbff;border:2px solid #22b8cf}
+.evidence.evidence-clue::before{content:"🔍";position:absolute;right:-4px;bottom:-12px;font-size:56px;opacity:.15;z-index:-1}
+.evidence.evidence-means::before{content:"⚔️";position:absolute;right:-4px;bottom:-12px;font-size:56px;opacity:.18;z-index:-1}
+.evidence::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-18deg);animation:gbshine 6s ease-in-out infinite;pointer-events:none}
+.evidence .ev-icon{font-size:36px;line-height:1;margin:0;filter:drop-shadow(0 2px 4px #0007);transition:transform .25s}
+.evidence.small .ev-icon{font-size:26px}
+.evidence:hover{transform:translateY(-4px) rotate(0)!important;box-shadow:0 10px 24px #000a}.evidence:hover .ev-icon{transform:scale(1.25) rotate(-8deg)}
+@keyframes evflip{from{transform:rotateY(90deg);opacity:0}}
+body.board-ro #screen-sp-board button{display:none!important}
+body.board-ro #spTakePanel,body.board-ro #spHandOpenPanel,body.board-ro #spHandLockedPanel{display:none!important}
+
 </style>
 </head>
 <body>
@@ -589,6 +620,7 @@ input.sh-in,select.sh-in{border-radius:10px}
     <div id="admRoomCreated" class="hidden" style="margin-top:16px">
       <div class="stamp">ROOM <span id="admRoomIdShown"></span> SIAP</div>
       <p class="muted">Bagikan nomor room ini ke pemain. Anda bisa kembali sebagai guest untuk ikut bermain.</p>
+      <p class="muted small-note">📺 Mode Papan + HP: di tablet buka Guest → isi No Room → <b>Masuk sebagai Papan</b>. Pemain tetap masuk lewat HP masing-masing.</p>
       <button class="btn" style="margin-bottom:8px;background:linear-gradient(#22c55e,#15803d)" onclick="admStartGame()">▶ Mulai Permainan (jika semua sudah Siap)</button>
       <button class="btn secondary" onclick="backToGuestAsAdmin()">Kembali ke Guest &amp; Ikut Main</button>
     </div>
@@ -605,6 +637,7 @@ input.sh-in,select.sh-in{border-radius:10px}
     <div id="gJoinErr" class="muted" style="color:var(--red)"></div>
     <button class="btn" onclick="doCheckRoom()">Lanjut Pilih Warna</button>
     <button class="btn secondary" style="margin-top:8px" onclick="showScreen('local-setup')">🖥️ Main di 1 Device (Tanpa Device Lain)</button>
+    <button class="btn secondary" style="margin-top:8px" onclick="doBoardJoin()">📺 Masuk sebagai Papan (tablet) — pemain pakai HP</button>
     <button class="btn secondary" style="margin-top:8px" onclick="showScreen('login')">Kembali</button>
   </div>
 
@@ -777,6 +810,10 @@ input.sh-in,select.sh-in{border-radius:10px}
     <button class="btn" style="margin-top:14px" id="sgRoleOkBtn" onclick="sgAckStage('role')">Mengerti, Mulai Main</button>
     <div id="sgRoleWaitNote" class="small-note center hidden">Menunggu pemain lain…</div>
   </div>
+
+  <!-- PAPAN (tablet) -->
+  <div id="screen-board" class="card hidden"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 id="boardTitle" style="margin:0"></h2></div><div id="boardBody" style="margin-top:12px"></div></div>
+  <button id="boardExit" class="btn secondary small hidden" style="position:fixed;left:10px;top:10px;z-index:9990;width:auto" onclick="doReset()">✖ Keluar Papan</button>
 
   <!-- SG 1 TABLET (moderator) -->
   <div id="screen-sg-local" class="card hidden"><h2 id="sgLocalTitle" style="margin-top:0"></h2><div id="sgLocalBody"></div></div>
@@ -3586,6 +3623,110 @@ setInterval(function(){var e=document.getElementById('sgLocalTimer');if(e&&state
 
 </script>
 <script>
+/* ===== INVESTIGASI: seni crime tiles, kartu bukti, mekanisme 1 tablet umum, mode Papan + HP ===== */
+var TILE_HUE={'Cause of death':350,'Location':200,'Cuaca':210,'Durasi Kejadian':270,'Kondisi Mayat':330,'Identitas Korban':160,'Waktu Kejadian':240,'Kondisi Pencahayaan':45,'Kondisi TKP':20,'Cara Akses TKP':95,'Jejak Barang Bukti':300,'Tingkat Keamanan TKP':190,'Aktivitas Korban':130,'Motif Kejahatan':0};
+var TILE_CAT_E={'Cause of death':'🩺','Location':'📍','Cuaca':'🌤️','Durasi Kejadian':'⏳','Kondisi Mayat':'🪦','Identitas Korban':'🪪','Waktu Kejadian':'🕰️','Kondisi Pencahayaan':'💡','Kondisi TKP':'🧩','Cara Akses TKP':'🚪','Jejak Barang Bukti':'🔍','Tingkat Keamanan TKP':'🛡️','Aktivitas Korban':'🎬','Motif Kejahatan':'🎭'};
+var TILE_RULES=[['kehilangan banyak darah','🩸'],['noda darah','🩸'],['jejak / noda','🩸'],['cedera parah','🩹'],['benturan','💥'],['tembus','🗡️'],['tertindih','🪨'],['jatuh yang','🧗'],['overdosis','💊'],['keracunan','☠️'],['alergi','🤧'],['penyakit','🏥'],['beracun','🧪'],['organ dalam','🫀'],['asfiksia','😮‍💨'],['listrik','⚡'],['luka bakar','🔥'],['tenggelam','🌊'],['kecelakaan','🚑'],['penyebab tidak','❓'],
+['ruang tamu','🛋️'],['kamar tidur','🛏️'],['kamar mandi','🛁'],['kamar hotel','🏨'],['kantor','🏢'],['apartemen','🏙️'],['restoran','🍽️'],['bar / lounge','🍸'],['minimarket','🏪'],['perbelanjaan','🛍️'],['bioskop','🎬'],['rumah sakit','🏥'],['location | gang','🚧'],['parkir','🅿️'],['gudang','📦'],['pabrik','🏭'],['stasiun','🚉'],['taman','🎠'],
+['cerah','☀️','sun'],['berawan','☁️'],['hujan','🌧️','rain'],['badai','⛈️','storm'],['berkabut','🌫️','fog'],['panas','♨️','sun'],
+['durasi kejadian | seketika','⚡'],['sangat singkat','💨'],['durasi kejadian | singkat','⏱️'],['durasi kejadian | sedang','⏳'],['berkepanjangan','🕰️'],['durasi tidak','❓'],
+['masih baru','🧍'],['kekakuan','🪦'],['terlihat cedera','🩹'],['basah','💧'],['kondisi tidak jelas','🌀'],
+['dewasa muda','🧑'],['paruh baya','🧔'],['lansia','👴'],['pelajar','🎓'],['pekerja','💼'],['identitas tidak','🕵️'],
+['dini hari','🌌','night'],['waktu kejadian | pagi','🌅'],['waktu kejadian | siang','☀️','sun'],['sore','🌇'],['larut malam','🌙','night'],
+['kondisi pencahayaan | terang','💡'],['pencahayaan normal','🔆'],['remang','🕯️','dim'],['gelap total','🌑','dark'],['lampu darurat','🚨','blink'],['berkedip','💡','blink'],
+['tidak ada tanda','🧘'],['ada tanda pergumulan','🤼'],['perabotan','🪑'],['berserakan','🗑️'],['pintu / jendela rusak','🪟'],['tidak terganggu','✨'],
+['pintu utama','🚪'],['pintu belakang','🔙'],['cara akses tkp | jendela','🪟'],['pintu darurat','🚨'],['area akses terbatas','🔒'],['jalur masuk','❓'],
+['sidik jari','🖐️'],['jejak kaki','👣'],['rambut','🧵'],['residu','🧪'],['tidak ada jejak','🔍'],
+['tanpa sistem','🔓'],['keamanan dasar','🔐'],['petugas keamanan','👮'],['cctv','📹'],['keamanan | area terbatas','🚫'],['keamanan tinggi','🛡️'],
+['sedang tidur','😴'],['sedang bekerja','💻'],['makan / minum','🍜'],['bepergian','🧳'],['sedang belajar','📚'],['aktivitas tidak','❓'],
+['balas dendam','😈'],['finansial','💰'],['kecemburuan','💔'],['konflik pribadi','🗯️'],['menutupi rahasia','🤫'],['motif tidak','❓']];
+function tileArt(cat,opt){var k=(cat+' | '+opt).toLowerCase();
+ for(var i=0;i<TILE_RULES.length;i++){if(k.indexOf(TILE_RULES[i][0])>=0)return {e:TILE_RULES[i][1],fx:TILE_RULES[i][2]||''};}
+ return {e:TILE_CAT_E[cat]||'🧩',fx:''};}
+function buildTilesHtml(room,isForensic){
+ return room.crimeTiles.map(function(tile,idx){
+  var h=TILE_HUE[tile.category];if(h===undefined)h=220;
+  var chosen=tile.chosen!==null,art=chosen?tileArt(tile.category,tile.options[tile.chosen]):{e:TILE_CAT_E[tile.category]||'🧩',fx:''};
+  var html='<div class="tile'+(tile.fixed?' fixed':'')+(chosen?' revealed':' wait')+(art.fx?' fx-'+art.fx:'')+'" style="--h:'+h+'"><i class="tbg">'+art.e+'</i>';
+  html+='<div class="cat">'+tile.category+(tile.fixed?' (wajib)':'')+'</div>';
+  if(chosen){html+='<div class="chosen">'+art.e+' '+tile.options[tile.chosen]+'</div>';
+   if(isForensic&&!tile.fixed)html+='<div style="margin-top:8px"><button class="btn secondary small" onclick="doSwap('+idx+')">Ganti Tile Ini</button></div>';}
+  else if(isForensic){html+='<div class="tile-opts">'+tile.options.map(function(o,oi){return '<button class="opt-btn" onclick="doForensicChoose('+idx+','+oi+')">'+tileArt(tile.category,o).e+' '+o+'</button>';}).join('')+'</div>';}
+  else html+='<div class="small-note">Menunggu Dokter Forensik…</div>';
+  return html+'</div>';}).join('');
+}
+/* ---- 1 tablet: lobi (ketuk nama = siap) & cek peran, dipakai Investigasi + Splendor ---- */
+var LC={seen:{},viewing:null};
+function renderLocalCommon(room){
+ document.getElementById('switchPlayerLink').classList.add('hidden');
+ if(LC.viewing&&room.phase==='role_reveal')return;
+ var T=document.getElementById('sgLocalTitle'),B=document.getElementById('sgLocalBody');showScreen('sg-local');
+ if(room.phase==='lobby'){LC.seen={};var all=room.players.length===room.settings.totalPlayers&&room.players.every(function(p){return p.ready;});
+  T.textContent='Siap-siap — '+room.players.filter(function(p){return p.ready;}).length+'/'+room.settings.totalPlayers+' siap';
+  B.innerHTML='<p class="muted">Ketuk nama pemain untuk langsung <b>Siap</b> (ketuk lagi untuk batal).</p>'
+   +room.players.map(function(p){return sgLocalBtn("sgLocalReady('"+p.id+"')",p.color,gbEsc(p.name)+(p.ready?' ✅ Siap':' ⏳'));}).join('')
+   +'<button class="btn" style="margin-top:12px" '+(all?'':'disabled ')+'onclick="sgLocalStart()">▶ Mulai Permainan</button>';return;}
+ if(room.phase==='role_reveal'){var seen=room.players.filter(function(p){return LC.seen[p.id];}).length;
+  T.textContent='Cek Peran — '+seen+'/'+room.players.length+' sudah';
+  B.innerHTML='<p class="muted">Serahkan tablet ke tiap pemain. Ketuk <b>namamu</b> untuk melihat peran, lalu tutup dan serahkan ke pemain berikutnya.</p>'
+   +room.players.map(function(p){return sgLocalBtn("lcViewRole('"+p.id+"')",p.color,'👁 '+gbEsc(p.name)+(LC.seen[p.id]?' ✅':''));}).join('')
+   +'<button class="btn" style="margin-top:12px" '+(seen===room.players.length?'':'disabled ')+'onclick="lcBegin()">▶ Mulai Permainan</button>'
+   +(seen<room.players.length?'<div class="small-note center">Tombol aktif setelah semua pemain melihat perannya.</div>':'');}
+}
+function lcViewRole(pid){var room=state.room,pl=room.players.find(function(p){return p.id===pid;});LC.viewing=pid;
+ showScreen('role');renderRole(room,pl);var b=document.getElementById('roleOkBtn');b.setAttribute('onclick','lcCloseRole()');b.textContent='Tutup & serahkan tablet';b.classList.remove('hidden');document.getElementById('roleWaitNote').classList.add('hidden');}
+function lcCloseRole(){LC.seen[LC.viewing]=true;LC.viewing=null;renderLocalCommon(state.room);}
+function lcBegin(){return state.room.players.reduce(function(pr,p){return pr.then(function(){return api('ack',{roomId:state.roomId,playerId:p.id,stage:'role'});});},Promise.resolve()).then(poll);}
+/* ---- mode Papan (tablet) + HP pribadi ---- */
+function boardPlayers(room,extra){return '<div>'+room.players.map(function(p){return '<span class="sg-player-row'+(p.alive===false?' dead':'')+'" style="display:inline-block;margin:3px"><span class="dot" style="background:'+p.color+'"></span>'+gbEsc(p.name)+(extra?extra(p):'')+(p.alive===false?' 💀':'')+'</span>';}).join('')+'</div>';}
+function doBoardJoin(){var id=document.getElementById('gRoomId').value.trim(),err=document.getElementById('gJoinErr');
+ if(!id){err.textContent='Isi No Room dulu';return;}
+ api('get_room',{roomId:id}).then(function(res){if(!res.room){err.textContent='Room tidak ditemukan';return;}
+  if(res.room.game==='saham'){SH.roomId=id;SH.gm=false;SH.playerId=null;SH.role='BOARD';SH.screen='game';showScreen('saham');shApi('sh_get_room',{}).then(function(r2){if(r2.ok&&r2.room){SH.room=r2.room;shRender();}else{shToast(r2.error||'Room tidak ditemukan');}});return;}
+  state.roomId=id;state.boardMode=true;state.playerId=null;state.localMode=false;state.room=res.room;state._boardSig='';
+  if(res.room.game==='serigala')state.ttsEnabled=true;
+  document.getElementById('boardExit').classList.remove('hidden');startPolling();render();});}
+function boardTts(){state.ttsEnabled=!state.ttsEnabled;state._boardSig='';render();}
+function renderBoard(room){
+ var sg=JSON.stringify(room)+state.ttsEnabled;if(sg===state._boardSig)return;state._boardSig=sg;
+ document.body.classList.toggle('board-ro',room.game==='splendor');
+ var g=room.game,ph=room.phase,dummy={id:null,alive:true,role:null},T=document.getElementById('boardTitle'),B=document.getElementById('boardBody');
+ var ack=function(st){return function(p){return (p.ack&&p.ack[st])?' ✅':' ⏳';};};
+ if(g==='splendor'&&ph==='playing'){showScreen('sp-board');renderSpBoard(room,{id:null,name:'',tokens:{white:0,blue:0,green:0,red:0,black:0,gold:0},reserved:[],bonuses:{white:0,blue:0,green:0,red:0,black:0},points:0});return;}
+ if(g==='splendor'&&ph==='ended'){showScreen('sp-ended');try{renderSpEnded(room,null);}catch(e){}return;}
+ if(g==='serigala'&&ph==='day_result'){showScreen('sg-dayresult');renderSgDayResult(room,dummy);return;}
+ if(g==='serigala'&&ph==='night_reveal'){showScreen('sg-nightreveal');renderSgNightReveal(room,dummy);return;}
+ if(g==='serigala'&&ph==='ended'){showScreen('sg-ended');renderSgEnded(room,dummy);return;}
+ if(g==='investigasi'&&ph==='ended'){showScreen('ended');renderEnded(room,dummy);document.getElementById('endedBanner').className='winner-banner win';return;}
+ showScreen('board');
+ var tts=g==='serigala'?'<button class="btn secondary small" style="margin-bottom:10px" onclick="boardTts()">'+(state.ttsEnabled?'🔊 Suara narator: ON':'🔇 Suara narator: OFF')+'</button>':'';
+ if(ph==='lobby'){T.textContent='📺 Ruang Tunggu — Room '+room.roomId;
+  var all=room.players.length===room.settings.totalPlayers&&room.players.every(function(p){return p.ready;});
+  B.innerHTML='<p class="muted">Pemain masuk lewat HP masing-masing dengan No Room <b>'+gbEsc(room.roomId)+'</b>.</p>'+boardPlayers(room,function(p){return p.ready?' ✅':' ⏳';})
+   +'<button class="btn" style="margin-top:12px" '+(all?'':'disabled ')+'onclick="lobbyStart()">▶ Mulai Permainan</button>';return;}
+ if(ph==='role_reveal'){T.textContent='🎭 Cek peran di HP masing-masing';B.innerHTML='<p class="muted">Tunggu semua pemain melihat perannya…</p>'+boardPlayers(room,ack('role'));return;}
+ if(g==='investigasi'){
+  if(ph==='cards'){T.textContent='🃏 Pemain memilih kartu di HP';B.innerHTML=boardPlayers(room,ack('cards'));return;}
+  if(ph==='witness_guess'){T.textContent='🕵️ Saksi sedang menebak…';B.innerHTML='<p class="muted">Menunggu tebakan Saksi.</p>';return;}
+  T.textContent='🔎 Investigasi — Cycle '+room.cycle;
+  B.innerHTML=(ph==='final_call'?'<div class="sg-death-item">⏱ Investigasi ditutup — segera tebak jika belum!</div>':'')+'<div class="tiles-grid">'+buildTilesHtml(room,false)+'</div><h3 style="color:var(--gold)">Semua Kartu Pemain</h3><div id="boardHands"></div>';
+  renderAllHands(room,'boardHands');return;}
+ if(g==='serigala'){
+  var alive=room.players.filter(function(p){return p.alive!==false;}).length;
+  if(ph==='day'){T.textContent='☀️ Hari ke-'+(room.dayNumber||1);
+   B.innerHTML=tts+'<div class="sg-timer" id="sgLocalTimer">'+sgTimerText(room)+'</div>'+(room.lastNightDeaths||[]).map(function(d){return '<div class="sg-death-item">💀 <b>'+gbEsc(d.name)+'</b> ditemukan tewas'+(d.role?' — role: '+d.role:'')+'</div>';}).join('')+boardPlayers(room)+'<button class="btn" style="margin-top:12px" onclick="api(\'sg_day_timeout\',{roomId:state.roomId}).then(poll)">🗳️ Mulai Voting</button>';return;}
+  if(ph==='voting'){T.textContent='🗳️ Voting';var v=Object.keys(room.votes||{}).length;
+   B.innerHTML=tts+'<div class="sg-timer" id="sgLocalTimer">'+sgTimerText(room)+'</div><p class="muted">Sudah memilih: <b>'+v+'/'+alive+'</b> pemain (pilih di HP masing-masing).</p>'+boardPlayers(room)+'<button class="btn" style="margin-top:12px" onclick="api(\'sg_resolve_vote\',{roomId:state.roomId}).then(poll)">Selesaikan voting</button>';return;}
+  if(ph==='night'){T.textContent='🌙 Malam ke-'+(room.dayNumber||1);var pend=sgLocalPending(room);
+   B.innerHTML=tts+'<div class="sg-night-panel"><h4>Narasi</h4><p>Semua pemain <b>tutup mata</b> dan goyangkan tangan pelan-pelan 👐. Lakukan aksi malam di HP masing-masing.</p></div>'
+    +(pend?'<p class="muted">Peran yang sedang dipanggil: <b>'+(pend.bucket==='serigala'?'Serigala':(pend.bucket==='sekte'?'Kepala Sekte':SG_ROLES[pend.bucket].name))+'</b></p>':'<p class="muted">Semua peran sudah beraksi.</p>')
+    +boardPlayers(room)+'<button class="btn secondary" style="margin-top:12px" onclick="sgLocalResolveNight()">🌅 Selesaikan malam</button>';return;}
+ }
+ T.textContent='📺 Papan';B.innerHTML='<p class="muted">Fase: '+gbEsc(ph)+'</p>'+boardPlayers(room);
+}
+
+</script>
+<script>
 /* ================= CONFIG / STATE ================= */
 var APPS_SCRIPT_URL = 'firebase'; // backend kini Firebase
 var COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e84393','#95a5a6','#fd79a8','#00b894','#0984e3','#6c5ce7','#d35400','#c0392b'];
@@ -3659,6 +3800,7 @@ function confirmReset(){
   doReset();
 }
 function doReset(){
+  state.boardMode=false; state._boardSig=''; document.body.classList.remove('board-ro'); var _be=document.getElementById('boardExit'); if(_be) _be.classList.add('hidden');
   localStorage.removeItem('igk_room');
   localStorage.removeItem('igk_player');
   localStorage.removeItem('igk_local_mode');
@@ -4206,6 +4348,8 @@ function render(){
   }
 
   if(room.game==='serigala') sgNarrate(room);
+  if(state.boardMode){ renderBoard(room); return; }
+  if(state.localMode && room.game!=='serigala' && (room.phase==='lobby' || (room.game==='investigasi' && room.phase==='role_reveal'))){ renderLocalCommon(room); return; }
   if(state.localMode && room.game==='serigala'){ renderSgLocal(room); return; }
   document.getElementById('switchPlayerLink').classList.toggle('hidden',
     !(state.localMode && !(room.game==='splendor' && room.phase==='playing')));
@@ -4215,6 +4359,7 @@ function render(){
     return;
   }
   if(state.localMode && !state.playerId){
+    showScreen('local-picker');
     renderLocalPicker();
     return;
   }
@@ -4226,7 +4371,7 @@ function render(){
   if(room.game==='splendor'){ renderSplendor(room,m); return; }
 
   if(room.phase==='lobby'){ showScreen('lobby'); renderLobby(room,m); return; }
-  if(room.phase==='role_reveal'){ showScreen('role'); renderRole(room,m); return; }
+  if(room.phase==='role_reveal'){ showScreen('role'); var _rb=document.getElementById('roleOkBtn'); _rb.setAttribute('onclick',"ackStage('role')"); _rb.textContent='Mengerti'; renderRole(room,m); return; }
   if(room.phase==='cards'){ showScreen('cards'); renderCards(room,m); return; }
   if(room.phase==='investigation' || room.phase==='final_call'){ showScreen('investigation'); renderInvestigation(room,m); return; }
   if(room.phase==='witness_guess'){ showScreen('witness'); renderWitness(room,m); return; }
@@ -4425,13 +4570,12 @@ function evidenceIconStyle(text, size){
   return "background-image:url('"+EVI_SPRITE_URL+"');background-size:"+bgW+"px "+bgH+"px;background-position:"+bgX+"px "+bgY+"px;";
 }
 function evidenceIconHtml(text, size){
-  var style = evidenceIconStyle(text, size);
-  if(style) return '<span class="ev-icon-img" style="'+style+'"></span>';
   return '<span class="ev-icon">'+iconForText(text)+'</span>';
 }
 /* ---- ikon sederhana untuk kartu clue/means (dicocokkan lewat kata kunci,
    fallback ke ikon generik biar tetap kebagian walau ada ratusan item) ---- */
 var EVIDENCE_KEYWORD_ICONS = [
+  [['lencana'],'🛡️'],[['puzzle'],'🧩'],[['batu bata'],'🧱'],[['benda jatuh'],'📦'],[['batu'],'🪨'],
   [['pisau','golok','parang','clurit','celurit','pedang'],'🔪'],
   [['racun','beracun','narkotika','sianida','bius'],'☠️'],
   [['obat','pil','kapsul','farmasi'],'💊'],
@@ -4492,6 +4636,7 @@ function iconForText(text){
 }
 function renderHandGrid(elId, cards, type){
   var wrap = document.getElementById(elId);
+  var _sg = JSON.stringify(cards)+type; if(wrap.dataset.sig===_sg) return; wrap.dataset.sig=_sg;
   wrap.innerHTML='';
   var label = type==='means' ? 'MEANS' : 'CLUE';
   var cls = type==='means' ? 'evidence-means' : 'evidence-clue';
@@ -4536,34 +4681,15 @@ function closeAllModals(){ ['modalMurderer','modalDecoy','modalReveal','modalWai
 function playerName(room,id){ var p = room.players.find(function(x){return x.id===id;}); return p?p.name:'???'; }
 
 /* ---- investigation ---- */
-function buildTilesHtml(room, isForensic){
-  return room.crimeTiles.map(function(tile, idx){
-    var html = '<div class="tile'+(tile.fixed?' fixed':'')+'">';
-    html += '<div class="cat">'+tile.category+(tile.fixed?' (wajib)':'')+'</div>';
-    if(tile.chosen!==null){
-      html += '<div class="chosen">'+tile.options[tile.chosen]+'</div>';
-      if(isForensic && !tile.fixed){
-        html += '<div style="margin-top:8px"><button class="btn secondary small" onclick="doSwap('+idx+')">Ganti Tile Ini</button></div>';
-      }
-    } else if(isForensic){
-      html += '<div class="tile-opts">'+tile.options.map(function(o,oi){
-        return '<button class="opt-btn" onclick="doForensicChoose('+idx+','+oi+')">'+o+'</button>';
-      }).join('')+'</div>';
-    } else {
-      html += '<div class="muted small-note">Menunggu Dokter Forensik…</div>';
-    }
-    html += '</div>';
-    return html;
-  }).join('');
-}
 function renderInvestigation(room,m){
   document.getElementById('cycleBadge').textContent = 'Cycle '+room.cycle;
   document.getElementById('finalCallBanner').classList.toggle('hidden', room.phase!=='final_call');
 
   var isForensic = m.role==='Dokter Forensik';
-  var tilesHtml = buildTilesHtml(room, isForensic);
+  var _tsig = JSON.stringify(room.crimeTiles.map(function(t){return t.chosen;}))+isForensic;
+  if(_tsig!==state._tileSig){ state._tileSig=_tsig; var tilesHtml = buildTilesHtml(room, isForensic);
   document.getElementById('tilesGrid').innerHTML = tilesHtml;
-  document.getElementById('tilesSheetBody').innerHTML = tilesHtml;
+  document.getElementById('tilesSheetBody').innerHTML = tilesHtml; }
   var doneCount = room.crimeTiles.filter(function(t){return t.chosen!==null;}).length;
   var fab = document.getElementById('tilesFab');
   fab.textContent = '🧩 Crime Tiles ('+doneCount+'/6)';
@@ -4610,9 +4736,10 @@ function renderInvestigation(room,m){
     guessCard.querySelector('.btn').disabled = disable;
   }
 }
-function renderAllHands(room){
-  var wrap = document.getElementById('allHandsWrap');
+function renderAllHands(room,wid){
+  var wrap = document.getElementById(wid||'allHandsWrap');
   if(!wrap) return;
+  var _sg = JSON.stringify([room.hands,room.players.map(function(p){return p.id;})]); if(wrap.dataset.sig===_sg) return; wrap.dataset.sig=_sg;
   wrap.innerHTML='';
   room.players.forEach(function(p){
     var hand = room.hands ? room.hands[p.id] : null;
