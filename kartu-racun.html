@@ -80,10 +80,10 @@ function jn(){if(!prof())return;code=norm($('#c').value);db.ref('rooms/'+code+'/
 async function join(){R=db.ref('rooms/'+code);if((await R.child('kicked/'+me).once('value')).val()){alert('Kamu dikeluarkan dari room ini oleh Game Master');return home()}
  R.child('players/'+me).update({name:localStorage.nm,color:col,ready:false,kicked:null});
  $('#app').innerHTML='<div id=top></div><div id=rules></div><div id=pl class=box></div><div id=cfg></div><div id=hd></div><div id=lg class=box></div><div id=cht class=box><b>💬 Chat room</b><div id=chm></div><input id=chi placeholder="Ketik pesan…" maxlength=120 style="width:65%" onkeydown="if(event.keyCode==13)chat()"><button onclick=chat()>Kirim</button></div>';
- R.child('meta').on('value',s=>{meta=s.val();if(!meta){if(!bye)alert('Room ini sudah dihapus');location.reload();return}if(!rulesSet){rulesSet=1;$('#rules').innerHTML=meta.game==='bb'?bbRules():racunRules();GBM.set(meta.game==='bb'?'bb':'kr')}if(meta.gm===me&&!cfgBuilt){cfgBuilt=1;buildCfg();host()}render()});
+ R.child('meta').on('value',s=>{meta=s.val();if(!meta){if(!bye)alert('Room ini sudah dihapus');location.reload();return}if(!rulesSet){rulesSet=1;$('#rules').innerHTML=meta.game==='bb'?bbRules():racunRules();krTheme(meta.game==='bb'?'bb':'kr')}if(meta.gm===me&&!cfgBuilt){cfgBuilt=1;buildCfg();host()}render()});
  R.child('players').on('value',s=>{players=s.val()||{};if(players[me])joined=1;if(joined&&meta&&(!players[me]||players[me].kicked)){alert('Kamu dikeluarkan oleh Game Master');location.reload();return}render()});
  R.child('chat').limitToLast(30).on('value',s=>{const a=[];s.forEach(x=>{a.push(x.val())});const m=$('#chm');if(m){m.innerHTML=a.map(x=>`<div><b style="color:${esc(x.c)}">${esc(x.n)}</b>: ${esc(x.t)}</div>`).join('');m.scrollTop=m.scrollHeight}});
- R.child('game').on('value',s=>{game=s.val()||{};render()});
+ R.child('game').on('value',s=>{game=s.val()||{};gbFx(game);render()});
  R.child('hands/'+me).on('value',s=>{const hv=s.val();bbHand=(hv&&!Array.isArray(hv))?Object.assign({f:0,b:0,g:0},hv):{f:0,b:0,g:0};hand=Array.isArray(hv)?hv:[];if(bbHand.msg&&bbHand.msg!==lastMsg){lastMsg=bbHand.msg;kt(bbHand.msg.split('|')[1]||bbHand.msg)}bbSig='';render()})}
 function chat(){const i=$('#chi'),t=i.value.trim();if(!t)return;i.value='';R.child('chat').push({n:localStorage.nm,c:col,t:t.slice(0,120),ts:firebase.database.ServerValue.TIMESTAMP})}
 function kick(u){if(!confirm('Keluarkan '+(players[u]?.name||'pemain')+' dari room?'))return;
@@ -145,15 +145,15 @@ function act(a){if(!G||G.over||a.uid!==G.turn)return;const u=a.uid,h=H(u);
   if((c==='lose'||c==='swap')&&!okT(u,c,t))return;if(c==='pick'&&!(n>=1&&n<=10))return;
   h.splice(a.i,1);G.discard.push(c);G.last=c;let sk=0;
   if(typeof c=='number'){G.table=c;log(nm(u)+' main '+c)}else log(nm(u)+' pakai '+JK[c]);
-  if(c==='bomb'){poison(alive(),u,'BOM! semua -1 nyawa')}
+  if(c==='bomb'){G.fx={id:Date.now(),t:'fah'};poison(alive(),u,'BOM! semua -1 nyawa')}
   else{
-   if(c==='reset')G.table=0;if(c==='pick')G.table=n;if(c==='life')G.lives[u]++;if(c==='rev')G.dir*=-1;
+   if(c==='reset')G.table=0;if(c==='pick')G.table=n;if(c==='life'){G.lives[u]++;G.fx={id:Date.now(),t:'wow'}}if(c==='rev')G.dir*=-1;
    if(c==='lose'){const th=H(t),st=th.splice(Math.random()*th.length|0,1)[0];h.push(st);log(nm(u)+' mengambil 1 kartu dari '+nm(t))}
    if(c==='swap'){[G.hands[u],G.hands[t]]=[H(t),H(u)]}
    if(c==='shuf'){const A=alive(),cn=A.map(x=>H(x).length),pool=shuffle(A.flatMap(H));A.forEach((x,i)=>G.hands[x]=pool.splice(0,cn[i]))}
    if(c!=='lose'&&draw(u))poison(alive(),u,'Deck habis! semua -1 nyawa');else G.turn=nxt(u,1)}}
  publish()}
-function publish(){const up={secret:G,game:{table:G.table,turn:G.turn,dir:G.dir,deck:G.deck.length,disc:G.discard.length,log:G.log.slice(-8),over:G.over||null,order:G.order,last:G.last??null}};
+function publish(){const up={secret:G,game:{table:G.table,turn:G.turn,dir:G.dir,deck:G.deck.length,disc:G.discard.length,log:G.log.slice(-8),over:G.over||null,order:G.order,last:G.last??null,fx:G.fx||null}};
  G.order.forEach(u=>{up['hands/'+u]=G.hands[u]||null;up['players/'+u+'/lives']=G.lives[u];up['players/'+u+'/cards']=H(u).length});
  if(G.over)up['meta/state']='ended';R.update(up)}
 function start(){if(meta.game==='bb')return bbStart();const ids=Object.keys(players).filter(u=>players[u].ready);if(ids.length<2)return alert('Minimal 2 pemain Ready');
@@ -184,7 +184,7 @@ function bbStart(){const ids=Object.keys(players).filter(u=>players[u].ready);if
  order.forEach(u=>{B.alive[u]=1;B.f[u]=cfg.f;B.b[u]=cfg.b;B.g[u]=0;B.stk[u]=[];B.succ[u]=0});bbPublish();R.child('meta').update({state:'playing',cfg})}
 function bbPublish(){const up={secret:JSON.stringify(B)},stk={},cnt={},succ={},alive={};
  B.order.forEach(u=>{stk[u]=B.stk[u].map(c=>c.o?c.t:'x');cnt[u]=B.f[u]+B.b[u]+B.stk[u].length;succ[u]=B.succ[u];alive[u]=B.alive[u]?1:0;up['hands/'+u]={f:B.f[u],b:B.b[u],g:B.g[u],msg:B.note[u]||''}});
- up.game={bb:1,order:B.order,alive,cnt,stk,phase:B.phase,turn:B.turn,bid:B.bid,bidBy:B.bidBy||null,passed:B.passed,succ,chal:B.chal||null,disc:B.disc||null,need:B.need,opened:B.opened,ownLeft:B.ownLeft,round:B.round,log:B.log.slice(-12),winner:B.winner||null,win:B.cfg.win,placedAll:bbAllPlaced()};
+ up.game={bb:1,order:B.order,alive,cnt,stk,phase:B.phase,turn:B.turn,bid:B.bid,bidBy:B.bidBy||null,passed:B.passed,succ,chal:B.chal||null,disc:B.disc||null,need:B.need,opened:B.opened,ownLeft:B.ownLeft,round:B.round,log:B.log.slice(-12),winner:B.winner||null,win:B.cfg.win,placedAll:bbAllPlaced(),fx:B.fx||null};
  if(B.winner)up['meta/state']='ended';R.update(up)}
 function bbAct(a){if(!B||B.winner)return;const u=a.uid,ph=B.phase;
  if(ph==='place'&&u===B.turn){
@@ -202,7 +202,7 @@ function bbAfterBid(){const act=bbAl().filter(x=>!B.passed[x]);
 function bbReveal(t){const c=B.chal;if(!B.alive[t]||(B.ownLeft>0&&t!==c))return;const st=B.stk[t];let i=st.length-1;while(i>=0&&st[i].o)i--;if(i<0)return;
  const k=st[i];k.o=1;if(t===c&&B.ownLeft>0)B.ownLeft--;
  if(k.t==='b'){bbLog('💥 '+nm(c)+' membuka BOM milik '+nm(t)+'!');bbEndRound(false)}
- else{B.opened+=k.t==='g'?2:1;bbLog((k.t==='g'?'🌟 Bunga Emas (=2) ':'🌸 Bunga ')+'milik '+nm(t)+' terbuka — '+B.opened+'/'+B.need);if(B.opened>=B.need){bbLog('✅ '+nm(c)+' BERHASIL menebak!');bbEndRound(true)}}}
+ else{if(k.t==='g')B.fx={id:Date.now(),t:'wow'};B.opened+=k.t==='g'?2:1;bbLog((k.t==='g'?'🌟 Bunga Emas (=2) ':'🌸 Bunga ')+'milik '+nm(t)+' terbuka — '+B.opened+'/'+B.need);if(B.opened>=B.need){bbLog('✅ '+nm(c)+' BERHASIL menebak!');bbEndRound(true)}}}
 function bbEndRound(ok){const c=B.chal;B.order.forEach(u=>{B.stk[u].forEach(k=>{if(k.t==='f')B.f[u]++;else if(k.t==='b')B.b[u]++});B.stk[u]=[]});B.passed={};B.bid=0;B.bidBy=null;B.opened=0;
  if(ok){B.succ[c]++;if(B.succ[c]>=B.cfg.win){B.winner=c;B.phase='over';bbLog('🏆 '+nm(c)+' MENANG!');return}bbSpecial();bbNextRound(c)}
  else{B.phase='discard';B.disc=c;B.turn=c;bbLog('🗑 '+nm(c)+' harus membuang 1 kartu')}}
@@ -211,7 +211,7 @@ function bbDiscard(c){const u=B.disc;if(!['f','b'].includes(c)||B[c][u]<1)return
  const al=bbAl();if(al.length<=1){B.winner=al[0]||u;B.phase='over';bbLog('🏆 '+nm(B.winner)+' menang (pemain terakhir)');return}bbNextRound(u)}
 function bbNextRound(s){B.round++;B.phase='place';B.turn=B.alive[s]?s:bbNext(s);B.chal=null;B.disc=null}
 function bbSpecial(){if(!B.cfg.sp||Math.random()*100>=B.cfg.pct||B.cfg.wl+B.cfg.wg<=0)return;const al=bbAl(),u=al[Math.random()*al.length|0];
- if(Math.random()*(B.cfg.wl+B.cfg.wg)<B.cfg.wl){B.f[u]++;bbLog('✨ KARTU KHUSUS: '+nm(u)+' mendapat Nyawa +1 (bunga bertambah 1)!')}
+ if(Math.random()*(B.cfg.wl+B.cfg.wg)<B.cfg.wl){B.f[u]++;B.fx={id:Date.now(),t:'wow'};bbLog('✨ KARTU KHUSUS: '+nm(u)+' mendapat Nyawa +1 (bunga bertambah 1)!')}
  else{B.g[u]++;B.note[u]=(++B.ns)+'|🌟 Kamu mendapat Bunga Emas: bernilai 2 bunga, sekali pakai (rahasia!)'}}
 function bbKick(u){if(!B||B.winner||!B.alive[u]){R.child('players/'+u+'/kicked').set(true);return}
  B.alive[u]=0;bbLog('🚪 '+nm(u)+' dikeluarkan GM');
@@ -295,5 +295,13 @@ var GBM=(function(){
  var paint=function(){b.textContent=GBM.isOn()?'🎵':'🔇';};paint();b.onclick=function(){GBM.toggle();paint();};document.body.appendChild(b);
  document.addEventListener('pointerdown',function(){GBM.start();paint();});window.gbmPaint=paint;})();
 
-GBM.set('kr');setInterval(function(){try{GBM.reload();gbmPaint();}catch(e){}},1500);
+/* ---- audio file: musik latar Kartu Racun + efek suara ---- */
+const KRA={bgm:new Audio('audio/bgm-kartu-racun.mp3'),wow:'audio/wow.mp3',fah:'audio/fah.mp3'};KRA.bgm.loop=true;KRA.bgm.volume=0.8;KRA.bgm.preload='auto';let kraTheme='kr',fxSeen=null;
+const krPlay=a=>{try{const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}};
+function kraSync(){const want=GBM.isOn()&&kraTheme==='kr';if(want){if(KRA.bgm.paused)krPlay(KRA.bgm)}else if(!KRA.bgm.paused)KRA.bgm.pause()}
+function krTheme(n){kraTheme=n;GBM.set(n==='bb'?'bb':null);kraSync()}
+function kfx(t){if(!GBM.isOn()||!KRA[t])return;const a=new Audio(KRA[t]);a.volume=1;krPlay(a)}
+function gbFx(g){if(!g)return;if(fxSeen===null){fxSeen=g.fx?g.fx.id:0;return}if(g.fx&&g.fx.id>fxSeen){fxSeen=g.fx.id;kfx(g.fx.t)}}
+krTheme('kr');setInterval(kraSync,400);document.addEventListener('pointerdown',kraSync);
+setInterval(function(){try{GBM.reload();gbmPaint();}catch(e){}},1500);
 </script></body></html>
