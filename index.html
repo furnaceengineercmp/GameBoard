@@ -494,16 +494,12 @@ body.wide #guessLogCard{columns:2}
       <button class="btn" onclick="showScreen('guest-join')">Guest / Pemain</button>
       <button class="btn secondary" onclick="showScreen('admin-login')">Game Master</button>
       <button class="btn" style="background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1a0f00" onclick="openKR()">🃏 Kartu Racun</button>
-      <button class="btn" style="background:linear-gradient(90deg,#f43f5e,#fbbf24);color:#2a0a00" onclick="openTR('')">🔥 Tim Rusuh</button>
     </div>
   </div>
 
   <!-- SAHAM: aplikasi mandiri, dirender sendiri oleh script Saham ke dalam #shApp -->
   <div id="screen-kr" class="hidden" style="max-width:760px;margin:0 auto"><button class="btn secondary" onclick="closeKR()">⬅ Menu Utama</button>
     <iframe id="krFrame" title="Kartu Racun" style="width:100%;height:calc(100vh - 90px);border:0;margin-top:8px;border-radius:12px"></iframe></div>
-
-  <div id="screen-tr" class="hidden" style="max-width:1100px;margin:0 auto"><button class="btn secondary" onclick="closeTR()">⬅ Menu Utama</button>
-    <iframe id="trFrame" title="Tim Rusuh" allow="fullscreen" style="width:100%;height:calc(100vh - 90px);border:0;margin-top:8px;border-radius:12px;background:#0b0620"></iframe></div>
 
   <div id="screen-saham" class="hidden sh-body">
     <div style="max-width:1180px;margin:0 auto;padding:10px 14px 0">
@@ -532,7 +528,6 @@ body.wide #guessLogCard{columns:2}
       <option value="serigala">Serigala (Werewolf)</option>
       <option value="splendor">Splendor</option>
       <option value="saham">Saham</option>
-      <option value="timrusuh">Tim Rusuh (Party Game)</option>
       <option value="mrwhite" disabled>Mr. White (segera)</option>
     </select>
 
@@ -640,30 +635,6 @@ body.wide #guessLogCard{columns:2}
       <p class="small-note">Setelah room dibuat, Anda langsung masuk ke aplikasi SAHAM sebagai Game Master.</p>
       <div id="shErrAdm" class="muted" style="color:var(--red)"></div>
       <button class="btn" style="margin-top:10px" onclick="doCreateRoomSaham()">Buat / Update Room</button>
-    </div>
-
-    <div id="admTimRusuhFields" class="hidden">
-      <label>No Room</label>
-      <input type="text" id="trRoomAdm" placeholder="mis. 1234">
-      <div class="row">
-        <div><label>Mode Bermain</label>
-          <select id="trModeAdm" onchange="document.getElementById('trTeamsWrap').classList.toggle('hidden',this.value!=='team')">
-            <option value="ind">Individu</option><option value="team">Tim</option></select></div>
-        <div id="trTeamsWrap" class="hidden"><label>Jumlah Tim</label>
-          <select id="trTeamsAdm"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-        <div><label>Poin Selesai</label><input type="number" id="trTargetAdm" min="10" max="500" value="50"></div>
-      </div>
-      <label>Minigame yang dimainkan</label>
-      <div id="trMgsAdm">
-        <label><input type="checkbox" value="1" checked> Pulau Asam Runtuh</label>
-        <label><input type="checkbox" value="3" checked> Hujan Timah</label>
-        <label><input type="checkbox" value="22" checked> Lari Selip</label>
-        <label><input type="checkbox" value="29" checked> Sabuk Hadiah</label>
-        <label><input type="checkbox" value="48" checked> Tembak Gesit</label>
-      </div>
-      <p class="small-note">Layar ini jadi layar utama (TV/laptop GM). Pemain gabung lewat HP/laptop: menu awal → 🔥 Tim Rusuh → isi No Room. Juara 1 tiap minigame +10 poin, lalu turun bertahap.</p>
-      <div id="trErrAdm" class="muted" style="color:var(--red)"></div>
-      <button class="btn" style="margin-top:10px" onclick="doCreateRoomTimRusuh()">Buat Room &amp; Buka Layar Utama</button>
     </div>
 
     <div style="margin-top:14px"><button class="btn secondary" onclick="admLoadRooms()">📋 Kelola Room</button><div id="admRoomList" style="margin-top:8px"></div></div>
@@ -4201,7 +4172,6 @@ function onAdmGameTypeChange(){
   document.getElementById('admSerigalaFields').classList.toggle('hidden', v!=='serigala');
   document.getElementById('admSplendorFields').classList.toggle('hidden', v!=='splendor');
   document.getElementById('admSahamFields').classList.toggle('hidden', v!=='saham');
-  document.getElementById('admTimRusuhFields').classList.toggle('hidden', v!=='timrusuh');
   document.getElementById('admRoomCreated').classList.add('hidden');
   if(v==='serigala' && !document.getElementById('sgRoles').childElementCount) populateSgRoles();
 }
@@ -5846,16 +5816,6 @@ function shResume(){
     SH.room=res.room; SH.screen=(res.room.phase==="lobby"&&x.role==="GM")?"gmcreate":"game"; showScreen("saham"); shRender();
   });
 }
-function doCreateRoomTimRusuh(){
-  var id=document.getElementById('trRoomAdm').value.trim().replace(/[^A-Za-z0-9_-]/g,''), err=document.getElementById('trErrAdm');
-  var mgs=[].slice.call(document.querySelectorAll('#trMgsAdm input:checked')).map(function(c){return Number(c.value);});
-  if(!id){err.textContent='Isi No Room';return;} if(!mgs.length){err.textContent='Pilih minimal 1 minigame';return;}
-  err.textContent='';
-  var cfg={mode:document.getElementById('trModeAdm').value,teams:Number(document.getElementById('trTeamsAdm').value)||2,target:Number(document.getElementById('trTargetAdm').value)||50,mgs:mgs};
-  firebase.database().ref('gb/tr/'+id+'/cfg').set(cfg).then(function(){openTR(id,true);},function(e){err.textContent='Gagal (cek rules gb/tr / login GM): '+e.message;});
-}
-function openTR(id,host){ showScreen("tr"); document.getElementById("trFrame").src="tim-rusuh.html?"+(id?"room="+encodeURIComponent(id):"")+(host?"&host=1":""); }
-function closeTR(){ document.getElementById("trFrame").src="about:blank"; showScreen("login"); }
 function openKR(){ showScreen("kr"); try{firebase.database().goOffline();}catch(e){} document.getElementById("krFrame").src="kartu-racun.html"; }
 function closeKR(){ document.getElementById("krFrame").src="about:blank"; try{firebase.database().goOnline();}catch(e){} showScreen("login"); }
 function shRefreshGm(){ shApi("sh_get_room",{}).then(function(res){ if(res.ok&&res.room){SH.room=res.room; shRender();} }); }
