@@ -494,12 +494,16 @@ body.wide #guessLogCard{columns:2}
       <button class="btn" onclick="showScreen('guest-join')">Guest / Pemain</button>
       <button class="btn secondary" onclick="showScreen('admin-login')">Game Master</button>
       <button class="btn" style="background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1a0f00" onclick="openKR()">🃏 Kartu Racun</button>
+      <button class="btn" style="background:linear-gradient(90deg,#f43f5e,#fbbf24);color:#2a0a00" onclick="openTR('')">🔥 Tim Rusuh</button>
     </div>
   </div>
 
   <!-- SAHAM: aplikasi mandiri, dirender sendiri oleh script Saham ke dalam #shApp -->
   <div id="screen-kr" class="hidden" style="max-width:760px;margin:0 auto"><button class="btn secondary" onclick="closeKR()">⬅ Menu Utama</button>
     <iframe id="krFrame" title="Kartu Racun" style="width:100%;height:calc(100vh - 90px);border:0;margin-top:8px;border-radius:12px"></iframe></div>
+
+  <div id="screen-tr" class="hidden" style="max-width:1100px;margin:0 auto"><button class="btn secondary" onclick="closeTR()">⬅ Menu Utama</button>
+    <iframe id="trFrame" title="Tim Rusuh" allow="fullscreen" style="width:100%;height:calc(100vh - 90px);border:0;margin-top:8px;border-radius:12px;background:#0b0620"></iframe></div>
 
   <div id="screen-saham" class="hidden sh-body">
     <div style="max-width:1180px;margin:0 auto;padding:10px 14px 0">
@@ -528,6 +532,7 @@ body.wide #guessLogCard{columns:2}
       <option value="serigala">Serigala (Werewolf)</option>
       <option value="splendor">Splendor</option>
       <option value="saham">Saham</option>
+      <option value="timrusuh">Tim Rusuh (Party Game)</option>
       <option value="mrwhite" disabled>Mr. White (segera)</option>
     </select>
 
@@ -637,6 +642,30 @@ body.wide #guessLogCard{columns:2}
       <button class="btn" style="margin-top:10px" onclick="doCreateRoomSaham()">Buat / Update Room</button>
     </div>
 
+    <div id="admTimRusuhFields" class="hidden">
+      <label>No Room</label>
+      <input type="text" id="trRoomAdm" placeholder="mis. 1234">
+      <div class="row">
+        <div><label>Mode Bermain</label>
+          <select id="trModeAdm" onchange="document.getElementById('trTeamsWrap').classList.toggle('hidden',this.value!=='team')">
+            <option value="ind">Individu</option><option value="team">Tim</option></select></div>
+        <div id="trTeamsWrap" class="hidden"><label>Jumlah Tim</label>
+          <select id="trTeamsAdm"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        <div><label>Poin Selesai</label><input type="number" id="trTargetAdm" min="10" max="500" value="50"></div>
+      </div>
+      <label>Minigame yang dimainkan</label>
+      <div id="trMgsAdm">
+        <label><input type="checkbox" value="1" checked> Pulau Asam Runtuh</label>
+        <label><input type="checkbox" value="3" checked> Hujan Timah</label>
+        <label><input type="checkbox" value="22" checked> Lari Selip</label>
+        <label><input type="checkbox" value="29" checked> Sabuk Hadiah</label>
+        <label><input type="checkbox" value="48" checked> Tembak Gesit</label>
+      </div>
+      <p class="small-note">Layar ini jadi layar utama (TV/laptop GM). Pemain gabung lewat HP/laptop: menu awal → 🔥 Tim Rusuh → isi No Room. Juara 1 tiap minigame +10 poin, lalu turun bertahap.</p>
+      <div id="trErrAdm" class="muted" style="color:var(--red)"></div>
+      <button class="btn" style="margin-top:10px" onclick="doCreateRoomTimRusuh()">Buat Room &amp; Buka Layar Utama</button>
+    </div>
+
     <div style="margin-top:14px"><button class="btn secondary" onclick="admLoadRooms()">📋 Kelola Room</button><div id="admRoomList" style="margin-top:8px"></div></div>
 
     <div id="admRoomCreated" class="hidden" style="margin-top:16px">
@@ -707,6 +736,7 @@ body.wide #guessLogCard{columns:2}
     <p class="muted" id="lobbyCount"></p>
     <div class="players-list" id="lobbyPlayers"></div>
     <button class="btn" id="readyBtn" onclick="toggleReady()">Siap!</button>
+    <div id="lobbyHostBox" style="margin-top:10px"></div>
     <button class="btn hidden" id="lobbyStartBtn" style="margin-top:10px;background:linear-gradient(#22c55e,#15803d)" onclick="lobbyStart()">▶ Mulai Permainan</button>
     <div id="lobbyCountdown" class="center muted" style="margin-top:10px"></div>
     <button class="btn secondary" style="margin-top:14px" onclick="leaveLobby()">Batal / Keluar Room</button>
@@ -1114,6 +1144,12 @@ function handle(p) {
       case 'update_player': result = withLock(p.roomId, function (room) { return updatePlayer(room, p); }); break;
       case 'start_game': result = withLock(p.roomId, function (room) { return room.game === 'serigala' ? sgStartGame(room, p) : (room.game === 'splendor' ? spStartGame(room, p) : startGame(room, p)); }); break;
       case 'ack': result = withLock(p.roomId, function (room) { return room.game === 'serigala' ? sgAck(room, p) : ackAction(room, p); }); break;
+      case 'set_host': result = withLock(p.roomId, function (room) {
+        if (!room.players.some(function (x) { return x.id === p.playerId; })) return { __save: false, error: 'Pemain tidak ditemukan.' };
+        if (!room.players.some(function (x) { return x.id === p.by; })) return { __save: false, error: 'Kamu bukan pemain di room ini.' };
+        if (room.hostId && p.by !== room.hostId && !p.claim) return { __save: false, error: 'Hanya host yang bisa menyerahkan peran host.' };
+        room.hostId = p.playerId; room.hostByGm = false;
+      }); break;
       case 'ack_all': result = (function(){ var rm = getRoomState(p.roomId); if (!rm) return { ok: false, error: 'Room tidak ditemukan' }; var last = { ok: true }; rm.players.forEach(function (pl) { last = handle({ action: 'ack', roomId: p.roomId, playerId: pl.id, stage: p.stage }); }); return last; })(); break;
       case 'sg_local_vote': result = (function(){ var rm = getRoomState(p.roomId); if (!rm) return { ok: false, error: 'Room tidak ditemukan' }; var last = { ok: true }; rm.players.filter(function (x) { return x.alive !== false; }).forEach(function (pl) { last = handle({ action: 'sg_vote', roomId: p.roomId, playerId: pl.id, targetId: p.targetId || 'skip' }); }); return last; })(); break;
       case 'sg_local_night': result = (function(){ var last = { ok: true }; (p.actors || []).forEach(function (aid) { handle({ action: 'sg_night_action', roomId: p.roomId, playerId: aid, bucket: p.bucket, targetId: p.targetId || null, extra: p.extra || null }); if (p.finish !== false) last = handle({ action: 'sg_night_finish', roomId: p.roomId, playerId: aid }); }); return last; })(); break;
@@ -1414,6 +1450,7 @@ function joinRoom(p) {
     if (colorTaken) return { ok: false, error: 'Warna sudah dipakai pemain lain.' };
     var playerId = uid();
     room.players.push({ id: playerId, name: p.name, color: p.color, ready: false, tokensLeft: 2 });
+    if (!room.hostId || (p.gm && !room.hostByGm)) { room.hostId = playerId; if (p.gm) room.hostByGm = true; }
     saveRoomState(room);
     return { ok: true, room: room, playerId: playerId };
   } finally {
@@ -1429,6 +1466,7 @@ function leaveRoom(p) {
     if (!room) return { ok: true };
     if (room.phase !== 'lobby') return { ok: false, error: 'Game sudah dimulai, tidak bisa keluar sekarang.' };
     room.players = room.players.filter(function (x) { return x.id !== p.playerId; });
+    if (room.hostId === p.playerId) { room.hostId = room.players.length ? room.players[Math.floor(Math.random() * room.players.length)].id : null; room.hostByGm = false; }
     saveRoomState(room);
     return { ok: true, room: room };
   } finally {
@@ -3529,11 +3567,13 @@ var GB=(function(){
  }
  var chatRefs={};
  function listRooms(){return ready.then(function(){return db.ref('gb/rooms').once('value');}).then(function(s){var a=[];s.forEach(function(c){var v=c.val()||{},m=v.m||{};a.push({id:c.key,game:m.game,phase:m.phase,n:m.n,t:m.t});});return a;});}
- function deleteRoom(id){return ready.then(function(){return Promise.all([db.ref('gb/rooms/'+id).remove(),db.ref('gb/chat/'+id).remove().catch(function(){})]);});}
+ function deleteRoom(id){return ready.then(function(){return Promise.all([db.ref('gb/rooms/'+id).remove(),db.ref('gb/chat/'+id).remove().catch(function(){}),db.ref('gb/presence/'+id).remove().catch(function(){})]);});}
  var chatCbs={};
  function chatSub(id,cb){(chatCbs[id]=chatCbs[id]||[]).push(cb);if(chatRefs[id])return;ready.then(function(){var r=db.ref('gb/chat/'+id).limitToLast(30);chatRefs[id]=r;r.on('value',function(s){var a=[];s.forEach(function(x){a.push(x.val());});chatCbs[id].forEach(function(f){f(a);});});});}
  function chatSend(id,n,c,t){ready.then(function(){db.ref('gb/chat/'+id).push({n:String(n).slice(0,14),c:String(c).slice(0,9),t:String(t).slice(0,120),ts:firebase.database.ServerValue.TIMESTAMP});});}
- return {call:call,listRooms:listRooms,deleteRoom:deleteRoom,chatSub:chatSub,chatSend:chatSend};
+ function presence(id,pid,cb){ready.then(function(){var r=db.ref('gb/presence/'+id),me=r.child(pid);
+  db.ref('.info/connected').on('value',function(s){if(s.val()){me.onDisconnect().set(false);me.set(true);}});r.on('value',function(s){cb(s.val());});});}
+ return {call:call,listRooms:listRooms,deleteRoom:deleteRoom,chatSub:chatSub,chatSend:chatSend,presence:presence};
 })();
 
 
@@ -3913,6 +3953,24 @@ setInterval(function(){try{GBM.reload();gbmPaint();GBM.set(gbmWanted());}catch(e
 
 </script>
 <script>
+/* ===== HOST ROOM: bisa diserahkan, otomatis pindah bila host keluar/putus ===== */
+var GP={key:null,map:{},claiming:false};
+function gbPresenceInit(roomId,pid){var k=roomId+'|'+pid;if(GP.key===k)return;GP.key=k;
+ GB.presence(roomId,pid,function(m){GP.map=m||{};try{if(window.SH&&SH.room&&SH.screen==='game'&&SH.room.phase==='lobby')shRender();else if(state.room&&state.room.phase==='lobby')render();}catch(e){}});}
+function gbHostHtml(room,myId,onSet,onClaim){
+ var host=room.players.find(function(p){return p.id===room.hostId;}),isHost=myId&&room.hostId===myId,others=room.players.filter(function(p){return p.id!==myId;});
+ var off=host&&GP.map[room.hostId]===false&&!isHost;
+ if(off&&myId){var cand=room.players.filter(function(p){return GP.map[p.id]!==false;}).map(function(p){return p.id;}).sort();
+  if(cand[0]===myId&&!GP.claiming){GP.claiming=true;setTimeout(function(){GP.claiming=false;},5000);onClaim();}}
+ if(isHost)return '<div class="muted small-note">👑 Kamu host (yang menekan Mulai). Serahkan ke pemain lain bila perlu:</div>'+(others.length?others.map(function(p){return '<button class="btn secondary small" style="width:auto;margin:3px" onclick="'+onSet+'(\''+p.id+'\')"><span class="dot" style="background:'+p.color+'"></span> '+gbEsc(p.name)+'</button>';}).join(''):'<div class="muted small-note">Belum ada pemain lain.</div>');
+ return host?'<div class="muted small-note">👑 Host: <b>'+gbEsc(host.name)+'</b>'+(off?' — <span style="color:#ef4444">tidak aktif, host dipindahkan otomatis…</span>':'')+'</div>':'';}
+function setHost(pid){api('set_host',{roomId:state.roomId,by:state.playerId,playerId:pid}).then(function(r){if(!r.ok)gbToast(r.error||'Gagal');poll();});}
+function claimHost(){api('set_host',{roomId:state.roomId,by:state.playerId,playerId:state.playerId,claim:true}).then(poll);}
+function shSetHost(pid){shApi('set_host',{by:SH.playerId,playerId:pid}).then(function(r){if(r.ok&&r.room){SH.room=r.room;shRender();}});}
+function shClaimHost(){shApi('set_host',{by:SH.playerId,playerId:SH.playerId,claim:true}).then(function(r){if(r.ok&&r.room){SH.room=r.room;shRender();}});}
+
+</script>
+<script>
 /* ================= CONFIG / STATE ================= */
 var APPS_SCRIPT_URL = 'firebase'; // backend kini Firebase
 var COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#9b59b6','#e84393','#95a5a6','#fd79a8','#00b894','#0984e3','#6c5ce7','#d35400','#c0392b'];
@@ -4143,6 +4201,7 @@ function onAdmGameTypeChange(){
   document.getElementById('admSerigalaFields').classList.toggle('hidden', v!=='serigala');
   document.getElementById('admSplendorFields').classList.toggle('hidden', v!=='splendor');
   document.getElementById('admSahamFields').classList.toggle('hidden', v!=='saham');
+  document.getElementById('admTimRusuhFields').classList.toggle('hidden', v!=='timrusuh');
   document.getElementById('admRoomCreated').classList.add('hidden');
   if(v==='serigala' && !document.getElementById('sgRoles').childElementCount) populateSgRoles();
 }
@@ -4336,7 +4395,7 @@ function doJoinRoom(){
   var err = document.getElementById('colorErr');
   if(!selectedColor){ err.textContent='Pilih warna dulu'; return; }
   var name = document.getElementById('gName').value.trim();
-  api('join_room',{roomId:pendingRoomId, name:name, color:selectedColor}).then(function(res){
+  api('join_room',{roomId:pendingRoomId, name:name, color:selectedColor, gm:!!localStorage.getItem('gb_gm_'+pendingRoomId)}).then(function(res){
     if(!res.ok){ err.textContent = res.error||'Gagal join'; return; }
     state.roomId = pendingRoomId;
     state.playerId = res.playerId;
@@ -4589,7 +4648,7 @@ function renderLobby(room,m){
   room.players.forEach(function(p){
     var row = document.createElement('div');
     row.className='player-row';
-    row.innerHTML='<span class="dot" style="background:'+p.color+'"></span><span>'+p.name+'</span><span class="status">'+(p.ready?'✅ Siap':'⏳ Menunggu')+'</span>';
+    row.innerHTML='<span class="dot" style="background:'+p.color+'"></span><span>'+p.name+(p.id===room.hostId?' 👑':'')+'</span><span class="status">'+(p.ready?'✅ Siap':'⏳ Menunggu')+'</span>';
     wrap.appendChild(row);
   });
   var btn = document.getElementById('readyBtn');
@@ -4597,10 +4656,13 @@ function renderLobby(room,m){
 
   var allReady = room.players.length===room.settings.totalPlayers && room.players.every(function(p){return p.ready;});
   var cd = document.getElementById('lobbyCountdown');
-  var isGm = state.isAdmin || state.localMode || !!localStorage.getItem('gb_gm_'+room.roomId);
+  var isHost = !!(m && room.hostId && room.hostId===m.id);
+  var isGm = isHost || state.isAdmin || state.localMode || (!room.hostId && !!localStorage.getItem('gb_gm_'+room.roomId));
   var sb = document.getElementById('lobbyStartBtn');
   sb.classList.toggle('hidden', !isGm); sb.disabled = !allReady;
-  cd.textContent = allReady ? (isGm ? 'Semua siap! Tekan Mulai Permainan.' : 'Semua siap! Menunggu Game Master memulai…') : '';
+  var hostP = room.players.find(function(p){return p.id===room.hostId;});
+  cd.textContent = allReady ? (isGm ? 'Semua siap! Tekan Mulai Permainan.' : 'Semua siap! Menunggu host'+(hostP?' ('+hostP.name+')':'')+' memulai…') : '';
+  if(!state.localMode && m){ gbPresenceInit(room.roomId, m.id); document.getElementById('lobbyHostBox').innerHTML = gbHostHtml(room, m.id, 'setHost', claimHost); }
   var lc = document.getElementById('lobbyChat');
   if(lc){ lc.classList.toggle('hidden', !!state.localMode); if(!state.localMode) lobbyChatInit(room); }
 }
@@ -5769,7 +5831,7 @@ function shPing(){
 }
 function shGmJoin(){
   var el=document.getElementById("shAddNm"); var nm=(el&&el.value.trim())||prompt("Nama kamu sebagai pemain:"); if(!nm) return; nm=nm.trim();
-  shApi("join_room",{name:nm,color:shFreeColor()}).then(function(res){
+  shApi("join_room",{name:nm,color:shFreeColor(),gm:true}).then(function(res){
     if(!res.ok) return shToast(res.error||"Gagal ikut main");
     SH.playerId=res.playerId; SH.gm=true; SH.role="PLAYER"; SH.prefName=nm; SH.room=res.room;
     shApi("update_player",{playerId:SH.playerId,ready:true}).then(function(r2){ if(r2.ok&&r2.room) SH.room=r2.room; SH.screen="game"; shRender(); });
@@ -5784,6 +5846,16 @@ function shResume(){
     SH.room=res.room; SH.screen=(res.room.phase==="lobby"&&x.role==="GM")?"gmcreate":"game"; showScreen("saham"); shRender();
   });
 }
+function doCreateRoomTimRusuh(){
+  var id=document.getElementById('trRoomAdm').value.trim().replace(/[^A-Za-z0-9_-]/g,''), err=document.getElementById('trErrAdm');
+  var mgs=[].slice.call(document.querySelectorAll('#trMgsAdm input:checked')).map(function(c){return Number(c.value);});
+  if(!id){err.textContent='Isi No Room';return;} if(!mgs.length){err.textContent='Pilih minimal 1 minigame';return;}
+  err.textContent='';
+  var cfg={mode:document.getElementById('trModeAdm').value,teams:Number(document.getElementById('trTeamsAdm').value)||2,target:Number(document.getElementById('trTargetAdm').value)||50,mgs:mgs};
+  firebase.database().ref('gb/tr/'+id+'/cfg').set(cfg).then(function(){openTR(id,true);},function(e){err.textContent='Gagal (cek rules gb/tr / login GM): '+e.message;});
+}
+function openTR(id,host){ showScreen("tr"); document.getElementById("trFrame").src="tim-rusuh.html?"+(id?"room="+encodeURIComponent(id):"")+(host?"&host=1":""); }
+function closeTR(){ document.getElementById("trFrame").src="about:blank"; showScreen("login"); }
 function openKR(){ showScreen("kr"); try{firebase.database().goOffline();}catch(e){} document.getElementById("krFrame").src="kartu-racun.html"; }
 function closeKR(){ document.getElementById("krFrame").src="about:blank"; try{firebase.database().goOnline();}catch(e){} showScreen("login"); }
 function shRefreshGm(){ shApi("sh_get_room",{}).then(function(res){ if(res.ok&&res.room){SH.room=res.room; shRender();} }); }
@@ -5837,7 +5909,7 @@ function shStart(){
   shApi("sh_start_game",{}).then(function(res){
     if(!res.ok) return shToast(res.error||"Belum bisa mulai");
     SH.room=res.room; SH.screen="game";
-    SH.role = (SH.gm&&SH.playerId) ? "PLAYER" : ((res.room.settings.deviceMode==="single") ? "ALL" : "GM");
+    SH.role = (SH.playerId&&(SH.gm||(res.room.hostId&&res.room.hostId===SH.playerId))) ? "PLAYER" : ((res.room.settings.deviceMode==="single") ? "ALL" : "GM");
     shRender();
   });
 }
@@ -5915,12 +5987,15 @@ function shConfirmEndGame(){
 }
 
 function shLobbyView(){
-  var r = SH.room;
-  return '<div class="sh-card"><div class="sh-h2">'+(SH.gm?"Lobi — kamu Game Master & pemain":"Menunggu Game Master memulai…")+'</div>'
-  + '<div class="sh-dim">Room '+shEsc(r.roomId)+' — '+r.players.length+'/'+r.settings.totalPlayers+' pemain</div>'
+  var r = SH.room, iHost = !!(SH.playerId && r.hostId && r.hostId===SH.playerId), canStart = SH.gm || iHost;
+  if(SH.playerId) gbPresenceInit(SH.roomId, SH.playerId);
+  var hostP = r.players.find(function(p){return p.id===r.hostId;});
+  return '<div class="sh-card"><div class="sh-h2">'+(canStart?(SH.gm?"Lobi — kamu Game Master & pemain":"Lobi — kamu host"):"Menunggu host"+(hostP?" ("+shEsc(hostP.name)+")":"")+" memulai…")+'</div>'
+  + '<div class="sh-dim">Room '+shEsc(r.roomId)+' · '+r.players.length+'/'+r.settings.totalPlayers+' pemain</div>'
   + '<div class="sh-row" style="margin-top:10px">'
-  + r.players.map(function(p){ return '<span class="sh-badge" style="background:'+p.color+';color:#111">'+shEsc(p.name)+'</span>'; }).join('')
-  + '</div>' + (SH.gm?'<div class="sh-row" style="margin-top:12px"><button class="sh-btn ok" onclick="shStart()">Mulai Permainan</button><button class="sh-btn ghost" onclick="shRefreshGm()">Muat ulang</button></div>':'') + '</div>';
+  + r.players.map(function(p){ return '<span class="sh-badge" style="background:'+p.color+';color:#111">'+shEsc(p.name)+(p.id===r.hostId?' 👑':'')+'</span>'; }).join('')
+  + '</div>' + (SH.playerId?'<div style="margin-top:10px">'+gbHostHtml(r,SH.playerId,'shSetHost',shClaimHost)+'</div>':'')
+  + (canStart?'<div class="sh-row" style="margin-top:12px"><button class="sh-btn ok" onclick="shStart()">Mulai Permainan</button><button class="sh-btn ghost" onclick="shRefreshGm()">Muat ulang</button></div>':'') + '</div>';
 }
 
 function shHeader(){
